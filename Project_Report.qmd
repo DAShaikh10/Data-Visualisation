@@ -1,7 +1,7 @@
 ---
 title: "Global Energy Transition and the Emissions Footprint"
 subtitle: "A Visual Analysis of How, Where, and Why the World Decarbonises Unevenly"
-author: "Group 7 — Data Visualization, MSc Data Science"
+author: "Group 7: Hrusheekesh Sawarkar, Kseniia Holovchenko, Melisa Cihan, Danish Ali Abdul Kareem Shaikh,  Amaan Aslam Shaikh"
 date: today
 format:
   html:
@@ -414,7 +414,7 @@ If emissions are governed primarily by the structure of energy systems, then eve
 
 ```{r q2-shocks}
 #| label: fig-q2
-#| fig-cap: "Global annual CO2 emissions, 1990 to 2024, with three major shocks annotated. The analytical question is whether each contraction rebounds or instead redirects the underlying trend."
+#| fig-cap: "Global annual CO2 emissions, 1990 to 2024, with three annotated disturbances: two global demand shocks (2008, 2020) and one localised supply-side disruption (2011). The analytical question is whether each produces a visible global contraction, and whether any contraction redirects the underlying trend rather than merely denting it."
 
 world_co2 <- co2_raw |>
   filter(country == "World", year >= 1990) |>
@@ -432,10 +432,15 @@ ggplot(world_co2, aes(year, co2)) +
   geom_line(linewidth = 1.1, colour = "#B2182B") +
   geom_point(data = filter(world_co2, year %in% shocks$year),
              size = 2.6, colour = "#B2182B") +
-  geom_text(data = shocks, aes(x = year, y = Inf, label = label),
-            angle = 90, vjust = -0.4, hjust = 1, size = 3, colour = "grey40",
-            inherit.aes = FALSE) +
-  scale_y_continuous(labels = comma_format(suffix = " Mt")) +
+  # Labels anchored low (near the x-axis) and rotated to grow upward, rather
+  # than anchored to the curve or floating in the top margin. Emissions sit
+  # well above 30,000 Mt at all three shock years, so a low anchor leaves the
+  # labels entirely beneath the line with wide clearance.
+  geom_text(data = shocks, aes(x = year, y = 1200, label = label),
+            angle = 90, hjust = 0, vjust = 0.5, nudge_x = -0.5, size = 2.8,
+            colour = "grey40", inherit.aes = FALSE) +
+  scale_y_continuous(labels = comma_format(suffix = " Mt"),
+                     limits = c(0, NA), expand = expansion(mult = c(0, 0.08))) +
   scale_x_continuous(breaks = seq(1990, 2024, 5)) +
   labs(title = "Shocks interrupt the emissions curve but rarely redirect it",
        subtitle = "Global annual CO2, 1990 to 2024, with major shocks annotated",
@@ -444,13 +449,15 @@ ggplot(world_co2, aes(year, co2)) +
 
 ```{r q2-table}
 #| label: tbl-q2
-#| tbl-cap: "Year-over-year change in global emissions surrounding the 2008 and 2020 shocks. The magnitude of the rebound is more readily assessed from the tabulated changes than from the line alone."
+#| tbl-cap: "Year-over-year change in global emissions surrounding the 2008 and 2020 shocks. Changes are computed on the full annual series before subsetting to these years, so each figure is a genuine year-over-year comparison."
 
 world_co2 |>
-  filter(year %in% c(2007, 2008, 2009, 2010, 2019, 2020, 2021, 2022)) |>
   arrange(year) |>
   mutate(`% change` = round(100 * (co2 - lag(co2)) / lag(co2), 1)) |>
-  knitr::kable(col.names = c("Year", "Global CO2 (Mt)", "% change"))
+  filter(year %in% c(2007, 2008, 2009, 2010, 2019, 2020, 2021, 2022)) |>
+  mutate(co2 = comma(round(co2)),
+         `% change` = paste0(ifelse(`% change` > 0, "+", ""), `% change`, "%")) |>
+  knitr::kable(col.names = c("Year", "Global CO2 (Mt)", "% change"), align = "r")
 ```
 
 Both the 2008 financial crisis and the 2020 lockdowns produce sharp and clearly visible contractions, and in each case emissions recover to their prior trajectory within approximately two years, after which the underlying ascent resumes. The shocks dent the trajectory but do not redirect it, which is consistent with the proposition that emissions are determined by the structural composition of energy systems rather than by transient demand events. It is precisely for this reason that the slow, structural transition examined in the remainder of the report is of greater consequence than any single crisis.
@@ -465,12 +472,20 @@ If prosperity necessarily entailed high emissions, the prospects for the transit
 
 ```{r q3-decoupling}
 #| label: fig-q3
-#| fig-cap: !expr 'paste0("GDP per capita (logarithmic) against CO2 per capita for ", eda_year, ", with bubble area proportional to population. This is a single-year cross-section: countries low and to the right are wealthy yet comparatively clean, showing that high income does not strictly require high emissions. The vertical dispersion at a given level of income carries the principal message; it does not, on its own, establish that any one country has reduced emissions over time.")'
+#| fig-cap: !expr 'paste0("GDP per capita (logarithmic) against CO2 per capita for ", eda_year, ", with bubble area proportional to population and colour giving the low-carbon share of energy. This is a single-year cross-section: countries low and to the right are wealthy yet comparatively clean, showing that high income does not strictly require high emissions. The vertical dispersion at a given level of income carries the principal message; it does not, on its own, establish that any one country has reduced emissions over time.")'
 
 decoupling <- co2 |>
   filter(year == eda_year, !is.na(gdp), !is.na(co2_per_capita),
          !is.na(population), population > 1e6) |>
-  mutate(gdp_per_capita = gdp / population)
+  mutate(gdp_per_capita = gdp / population) |>
+  # Colour encodes a third variable, the low-carbon share of energy, so the plot
+  # explains *why* countries at a given income differ vertically instead of
+  # re-encoding CO2 per capita (already the y-axis) redundantly on colour.
+  left_join(
+    energy |> filter(year == eda_year) |>
+      select(iso_code, low_carbon_share_energy),
+    by = "iso_code"
+  )
 
 to_label <- c("Norway", "France", "Sweden", "Qatar", "United States",
               "China", "India", "Germany", "Switzerland",
@@ -481,17 +496,19 @@ ggplot(decoupling, aes(gdp_per_capita, co2_per_capita)) +
   # the trend is the straight line the eye expects rather than a curved artefact.
   geom_smooth(method = "lm", formula = y ~ x, se = FALSE, colour = "grey70",
               linetype = "dashed", linewidth = 0.6) +
-  geom_point(aes(size = population, colour = co2_per_capita), alpha = 0.7) +
+  geom_point(aes(size = population, colour = low_carbon_share_energy),
+             alpha = 0.75) +
   geom_text_repel(data = filter(decoupling, country %in% to_label),
                   aes(label = country), size = 3, max.overlaps = Inf,
                   box.padding = 0.5) +
   scale_x_log10(labels = dollar_format()) +
+  scale_y_continuous(expand = expansion(mult = c(0.04, 0.10))) +
   scale_size_continuous(range = c(1, 12), guide = "none") +
-  scale_colour_viridis_c(option = "inferno", direction = -1,
-                         name = "CO2 / capita (t)") +
+  scale_colour_viridis_c(option = "viridis", direction = 1, na.value = "grey75",
+                         name = "Low-carbon\nshare of energy (%)") +
   labs(title = "High income does not require high emissions",
-       subtitle = paste0("GDP per capita (log) against CO2 per capita, ",
-                          eda_year, "; bubble area proportional to population"),
+       subtitle = paste0("GDP per capita (log) against CO2 per capita, ", eda_year,
+                          "; bubble area = population, colour = low-carbon share"),
        x = "GDP per capita (logarithmic scale)", y = lab_co2_pc,
        caption = owid_caption)
 ```
