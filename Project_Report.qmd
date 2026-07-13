@@ -16,6 +16,13 @@ format:
     theme: cosmo
     embed-resources: true
     fig-cap-location: bottom
+  pdf:
+    toc: true
+    toc-depth: 2
+    number-sections: true
+    fig-width: 9
+    fig-height: 5.5
+    fig-cap-location: bottom
 execute:
   warning: false
   message: false
@@ -128,7 +135,7 @@ The data used here were accessed on `r data_accessed`. All figures and quoted st
 
 # Exploratory Data Analysis {#sec-eda}
 
-Before any substantive argument is developed, it is necessary to establish how the principal variables are distributed and how they relate to one another. The two exploratory views below characterise the cross-country structure of the data and, in doing so, motivate the analytical choices made in the remainder of the report.
+Before any substantive argument is developed, it is necessary to establish how the principal variables are distributed and how they relate to one another. The exploratory views below characterise the scope, coverage, distributional shape, correlation structure, and low-dimensional geometry of the data and, in doing so, motivate the analytical choices made in the remainder of the report.
 
 A preliminary point about coverage governs the choice of reference year. The GDP series originates in the Maddison Project Database, whose most recent observations are both sparse and provisional, so the latest year for which energy, emissions, and GDP are jointly well populated is earlier than the final year of the emissions series. The reference year for every cross-sectional figure is therefore selected automatically as the most recent year in which a sufficient number of countries report all four core indicators, rather than fixed by hand, which prevents the decoupling analysis from being computed on an unrepresentatively thin sample.
 
@@ -232,6 +239,49 @@ knitr::kable(panel_overview, format.args = list(big.mark = ","))
 
 The contrast in @tbl-panel is informative in itself. The emissions panel runs far longer and holds more than twice as many observations, because OWID extends the CO2 record back into the eighteenth and nineteenth centuries for the early industrialisers, whereas the detailed energy-mix series begin only in the twentieth century. Mean completeness is below one half in both panels, confirming that the nominal country–year grid is sparsely populated and that the modern, well-covered window adopted throughout the report is a necessary restriction rather than a stylistic choice.
 
+That sparsity has a temporal structure which a single completeness figure cannot convey, so the next figure traces, year by year, how many countries report each of four core indicators. It shows directly when the panel becomes dense enough to support cross-country comparison and why the reference year cannot simply be the final year of the record.
+
+```{r eda-coverage}
+#| label: fig-coverage
+#| fig-cap: !expr 'paste0("Number of countries reporting each core indicator, 1900 to present. Emissions coverage widens gradually over the twentieth century; the energy series begin abruptly in 1965; the detailed renewables share is available for only about eighty countries in any year; and the GDP series (Maddison Project) terminates several years before the emissions and energy records do. The sharp fall in the energy line at the final year reflects incomplete reporting in the latest release rather than a genuine loss of coverage. The dashed line marks the automatically selected reference year, ", eda_year, ".")'
+#| fig-height: 4
+
+cov_long <- bind_rows(
+  co2 |> filter(!is.na(co2_per_capita)) |> count(year) |>
+    mutate(indicator = "CO2 per capita"),
+  co2 |> filter(!is.na(gdp)) |> count(year) |>
+    mutate(indicator = "GDP"),
+  energy |> filter(!is.na(energy_per_capita)) |> count(year) |>
+    mutate(indicator = "Energy per capita"),
+  energy |> filter(!is.na(renewables_share_energy)) |> count(year) |>
+    mutate(indicator = "Renewables share")
+) |>
+  filter(year >= 1900) |>
+  mutate(indicator = factor(indicator,
+                            levels = c("CO2 per capita", "GDP",
+                                       "Energy per capita", "Renewables share")))
+
+# Colour-blind-checked four-line palette; hues drawn from the report's existing
+# scheme so the same indicator families keep familiar colours.
+cov_pal <- c(`CO2 per capita`    = "#B2182B",
+             GDP                 = "#c46210",
+             `Energy per capita` = "#2166ac",
+             `Renewables share`  = "#1b7837")
+
+ggplot(cov_long, aes(year, n, colour = indicator)) +
+  geom_vline(xintercept = eda_year, linetype = "dashed",
+             colour = "grey55", linewidth = 0.4) +
+  geom_line(linewidth = 0.9) +
+  scale_colour_manual(values = cov_pal, name = NULL) +
+  scale_x_continuous(breaks = seq(1900, 2020, 20)) +
+  scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.05))) +
+  labs(title = "Reporting coverage is uneven in time as well as across countries",
+       subtitle = "Countries reporting each indicator, by year",
+       x = NULL, y = "Countries reporting", caption = owid_caption)
+```
+
+The figure explains three decisions made earlier. First, the energy indicators are entirely absent before 1965 and reach broad coverage only around 1980, which is why every energy-mix comparison in the report is confined to the modern era. Second, the renewables-share series never rises much above eighty countries, because the detailed fuel-mix data derive from the Energy Institute's *Statistical Review*, which covers only the larger energy economies; every analysis that conditions on renewable share therefore works with a smaller and somewhat wealthier sample than the emissions record suggests. Third, the GDP curve stops entirely at the right-hand edge: the Maddison series has simply not yet been compiled for the latest years. The reference year `r eda_year` is the last year before that termination, which is precisely what the automatic selection rule in @sec-eda was designed to achieve; fixing the reference year at the end of the emissions series instead would silently discard every economy from the GDP-dependent figures.
+
 The next table moves from the structure of the panels to the seven indicators used throughout the report, summarising each for the chosen reference year by its centre, spread, and range alongside the number of countries reporting it. The gap between the mean and the median in several rows previews the right-skew documented in @sec-dist, and the coverage column shows which indicators are most affected by missingness.
 
 ```{r eda-summary-table}
@@ -325,6 +375,44 @@ ren_stats <- energy |>
 
 Three of the four distributions exhibit a pronounced right tail. The median country emits about `r round(dist_stats$med_co2, 1)` tonnes of CO2 per capita, whereas several petro-states approach `r round(dist_stats$max_co2, 0)`; the median renewable share is near `r round(ren_stats$med_ren, 0)` percent, with only a limited cluster of leaders above fifty. This skewness is itself informative, since it indicates that the typical country differs substantially from the high-profile extremes, and it justifies the logarithmic axes adopted in @sec-decoupling, without which the numerous small economies would be compressed into an uninformative margin.
 
+The pooled histograms conceal where in the world the tail countries sit, so the same emissions variable is next broken out by continent. This adds a first geographical dimension to the distributional story and anticipates the spatial analysis of @sec-geo.
+
+```{r eda-boxplot}
+#| label: fig-box-continent
+#| fig-cap: !expr 'paste0("CO2 emissions per capita by continent, ", eda_year, ", for countries with populations above one million, on a logarithmic scale. Each point is a country; boxes give the median and interquartile range, and continents are ordered by their median. Oceania contains only a handful of countries above the population threshold, so its box rests on very few observations. The vertical spread within continents rivals the differences between them, and the most extreme emitters are the Gulf oil economies within Asia rather than any continent as a whole.")'
+#| fig-height: 5
+
+box_df <- co2 |>
+  filter(year == eda_year, population > 1e6, !is.na(co2_per_capita),
+         co2_per_capita > 0) |>
+  mutate(continent = countrycode(iso_code, "iso3c", "continent")) |>
+  filter(!is.na(continent)) |>
+  mutate(continent = fct_reorder(continent, co2_per_capita,
+                                 .fun = median, na.rm = TRUE))
+
+box_label <- box_df |>
+  group_by(continent) |>
+  slice_max(co2_per_capita, n = 1) |>
+  ungroup()
+
+ggplot(box_df, aes(continent, co2_per_capita)) +
+  geom_boxplot(aes(fill = continent), alpha = 0.45, colour = "grey35",
+               outlier.shape = NA, width = 0.55) +
+  geom_jitter(aes(colour = continent), width = 0.14, size = 1.6, alpha = 0.8) +
+  geom_text_repel(data = box_label, aes(label = country),
+                  size = 2.7, colour = "grey35", direction = "y",
+                  nudge_x = 0.38, seed = 7) +
+  scale_y_log10(labels = label_number()) +
+  scale_fill_manual(values = continent_pal, guide = "none") +
+  scale_colour_manual(values = continent_pal, guide = "none") +
+  labs(title = "Within-continent spread rivals between-continent differences",
+       subtitle = paste0("CO2 per capita by continent (log scale), ", eda_year,
+                          "; the highest emitter per continent is labelled"),
+       x = NULL, y = lab_co2_pc, caption = owid_caption)
+```
+
+The ordering of medians runs from Africa, where the median country emits well under one tonne per person, through the Americas and Asia to Europe and Oceania. Yet the within-continent spread is the more consequential feature: Asia alone spans the entire global range, containing both some of the lowest per-capita emitters and, in the Gulf states, the very highest. Continental membership is therefore a poor predictor of an individual country's footprint, which reinforces the report's emphasis on country-level structure over regional generalisation.
+
 ## Correlation structure of the core indicators {#sec-corr}
 
 The correlation matrix below summarises the pairwise relationships among the report's central indicators. It serves both as a diagnostic, identifying which relationships warrant a dedicated figure, and as an early indication of the report's organising tension.
@@ -381,6 +469,186 @@ ggplot(corr_long, aes(var1, var2, fill = r)) +
 ```
 
 Three features of the matrix are analytically consequential. First, wealthier countries consume substantially more energy per capita and, correspondingly, emit more per capita, reflecting the historical coupling of prosperity to fossil-fuelled industrial activity. Second, and more encouragingly, a higher renewable share is associated with markedly lower carbon intensity, indicating that altering the composition of energy supply genuinely reduces the emissions embodied in each unit of energy consumed. Third, and most importantly for what follows, the correlation between GDP per capita and renewable share is close to zero (Pearson *r* = `r sprintf("%.2f", r_gdp_ren)`, Spearman *ρ* = `r sprintf("%.2f", rho_gdp_ren)`, the two agreeing despite the skew). National wealth, in other words, does not determine how clean a country's energy system is. This near-absence of association is the empirical seed of the report's central question, addressed directly in @sec-decoupling: if income alone does not govern energy cleanliness, what does?
+
+Because a single coefficient can conceal structure — a strong nonlinear relationship, or two offsetting clusters, can each produce a correlation near zero — the decisive cell of the matrix is examined directly as a scatterplot before any conclusion is drawn from it.
+
+```{r eda-gdp-ren}
+#| label: fig-gdp-ren
+#| fig-cap: !expr 'paste0("GDP per capita (logarithmic) against the renewable share of primary energy, ", eda_year, ", for countries with populations above one million, coloured by continent. The fitted line is essentially flat and the cloud shows no hidden nonlinear pattern: rich and poor countries alike appear at every level of renewable share. Norway and Qatar sit at almost the same income yet at opposite extremes of the vertical axis.")'
+#| fig-height: 5.5
+
+gdp_ren <- co2 |>
+  filter(year == eda_year, population > 1e6, !is.na(gdp)) |>
+  transmute(iso_code, country, gdp_pc = gdp / population) |>
+  filter(gdp_pc > 0) |>
+  inner_join(
+    energy |> filter(year == eda_year) |>
+      select(iso_code, ren = renewables_share_energy),
+    by = "iso_code"
+  ) |>
+  filter(!is.na(ren)) |>
+  mutate(continent = countrycode(iso_code, "iso3c", "continent")) |>
+  filter(!is.na(continent))
+
+gdp_ren_label <- c("Norway", "Sweden", "Qatar", "United States", "China",
+                   "India", "Germany", "Brazil", "Bangladesh")
+
+ggplot(gdp_ren, aes(gdp_pc, ren)) +
+  geom_smooth(method = "lm", formula = y ~ x, se = TRUE, colour = "grey40",
+              fill = "grey85", linetype = "dashed", linewidth = 0.6) +
+  geom_point(aes(colour = continent), size = 2.2, alpha = 0.8) +
+  geom_text_repel(data = filter(gdp_ren, country %in% gdp_ren_label),
+                  aes(label = country), size = 2.9, colour = "grey30",
+                  max.overlaps = Inf, box.padding = 0.35, seed = 7) +
+  scale_x_log10(labels = dollar_format(accuracy = 1)) +
+  scale_colour_manual(values = continent_pal, name = NULL) +
+  labs(title = "Wealth does not buy a clean energy system",
+       subtitle = paste0("GDP per capita (log) against renewable share, ", eda_year,
+                          "; dashed line is the fitted linear trend"),
+       x = "GDP per capita (logarithmic scale)",
+       y = "Renewables share of primary energy (%)",
+       caption = owid_caption)
+```
+
+The scatterplot confirms that the near-zero coefficient is genuine rather than an artefact of averaging. The fitted line is flat across two orders of magnitude of income, and no curvature or clustering emerges that a linear coefficient might have missed. The most instructive contrasts are vertical rather than horizontal: Norway and Qatar command almost identical GDP per capita yet occupy opposite ends of the renewable axis, while in the middle of the income range Brazil's hydroelectric endowment lifts its renewable share to nearly one half, far above similarly placed fossil-dependent economies. Whatever separates clean from carbon-intensive energy systems, it is visible at every income level, and it is not wealth itself.
+
+## A low-dimensional view: principal component analysis {#sec-pca}
+
+The correlation matrix reports pairwise associations, but it cannot show whether the indicators jointly reduce to a small number of independent dimensions. Principal component analysis (PCA) answers that question directly. Six indicators are used: GDP per capita, CO2 per capita, and energy per capita, each log-transformed on account of the right-skew documented in @sec-dist, together with the renewable share, the low-carbon share, and carbon intensity, which are bounded or compact and enter untransformed. All six are standardised before decomposition so that no single indicator dominates by virtue of its units.
+
+```{r eda-pca}
+#| label: eda-pca
+#| include: false
+
+pca_df <- co2 |>
+  filter(year == eda_year, population > 1e6) |>
+  transmute(iso_code, country,
+            gdp_pc    = gdp / population,
+            co2_pc    = co2_per_capita,
+            intensity = co2_per_unit_energy) |>
+  inner_join(
+    energy |> filter(year == eda_year) |>
+      select(iso_code,
+             ene_pc = energy_per_capita,
+             ren    = renewables_share_energy,
+             lowc   = low_carbon_share_energy),
+    by = "iso_code"
+  ) |>
+  # Complete cases only; the logged variables must additionally be positive.
+  filter(if_all(c(gdp_pc, co2_pc, ene_pc), ~ !is.na(.x) & .x > 0),
+         !is.na(ren), !is.na(lowc), !is.na(intensity)) |>
+  mutate(continent = countrycode(iso_code, "iso3c", "continent")) |>
+  filter(!is.na(continent))
+
+pca_mat <- pca_df |>
+  transmute(`GDP/capita (log)`    = log10(gdp_pc),
+            `CO2/capita (log)`    = log10(co2_pc),
+            `Energy/capita (log)` = log10(ene_pc),
+            `Renewable share`     = ren,
+            `Low-carbon share`    = lowc,
+            `Carbon intensity`    = intensity)
+
+pca_fit <- prcomp(pca_mat, center = TRUE, scale. = TRUE)
+
+# The sign of each principal component is arbitrary. Fix a convention so the
+# prose below is stable across re-renders: PC1 increases with affluence
+# (positive loading on log GDP per capita) and PC2 increases with cleanliness
+# (positive loading on the low-carbon share).
+for (pc in c("PC1", "PC2")) {
+  anchor <- if (pc == "PC1") "GDP/capita (log)" else "Low-carbon share"
+  if (pca_fit$rotation[anchor, pc] < 0) {
+    pca_fit$rotation[, pc] <- -pca_fit$rotation[, pc]
+    pca_fit$x[, pc]        <- -pca_fit$x[, pc]
+  }
+}
+
+var_exp <- 100 * pca_fit$sdev^2 / sum(pca_fit$sdev^2)
+n_pca   <- nrow(pca_df)
+```
+
+```{r eda-scree}
+#| label: fig-scree
+#| fig-cap: !expr 'paste0("Scree plot of the six standardised indicators, ", eda_year, " (", n_pca, " countries with complete data). The solid line gives the share of variance explained by each component individually and the dashed line the cumulative share. The elbow after the second component indicates that two dimensions describe the data and the remaining components are noise.")'
+#| fig-height: 3.5
+
+scree_df <- tibble(
+  pc  = factor(paste0("PC", seq_along(var_exp)),
+               levels = paste0("PC", seq_along(var_exp))),
+  var = var_exp,
+  cum = cumsum(var_exp)
+)
+
+ggplot(scree_df, aes(pc, var, group = 1)) +
+  geom_line(aes(y = cum), colour = "grey45",
+            linetype = "dashed", linewidth = 0.5) +
+  geom_point(aes(y = cum), colour = "grey45", size = 2) +
+  geom_text(aes(y = cum, label = sprintf("%.0f%%", cum)),
+            vjust = -1.1, size = 3, colour = "grey40") +
+  geom_line(colour = "#2166ac", linewidth = 0.9) +
+  geom_point(colour = "#2166ac", size = 2.6) +
+  annotate("text", x = 3.15, y = 24, label = "elbow: components beyond\nPC2 add little",
+           hjust = 0, size = 3, colour = "grey35") +
+  annotate("curve", x = 3.1, y = 20, xend = 3.02, yend = 10,
+           curvature = 0.25, linewidth = 0.35, colour = "grey55",
+           arrow = arrow(length = unit(0.15, "cm"))) +
+  scale_y_continuous(limits = c(-2, 112),
+                     expand = expansion(mult = c(0, 0)),
+                     labels = label_number(suffix = "%")) +
+  labs(title = "Two components capture most of the indicator space",
+       subtitle = paste0("Scree plot: variance explained per component (solid) and cumulative (dashed), ",
+                          eda_year),
+       x = NULL, y = "Variance explained", caption = owid_caption)
+```
+
+```{r eda-biplot}
+#| label: fig-pca
+#| fig-cap: !expr 'paste0("PCA biplot of the six standardised indicators, ", eda_year, ". Points are countries, coloured by continent; arrows are the indicator loadings, scaled to the score range. PC1 separates countries by affluence and energy throughput, PC2 by the cleanliness of the energy system; the near-orthogonality of the two loading groups restates, in multivariate form, the near-zero correlation between wealth and renewable share.")'
+#| fig-height: 6.5
+
+scores <- bind_cols(pca_df |> select(country, continent),
+                    as_tibble(pca_fit$x))
+
+loadings <- as_tibble(pca_fit$rotation, rownames = "var")
+
+# Scale the unit-length loadings up to the spread of the scores so arrows and
+# points share one readable coordinate system.
+arrow_mult <- 0.8 * min(max(abs(scores$PC1)) / max(abs(loadings$PC1)),
+                        max(abs(scores$PC2)) / max(abs(loadings$PC2)))
+
+pca_label <- c("Norway", "Sweden", "France", "Qatar", "United Arab Emirates",
+               "United States", "China", "India", "Bangladesh", "Indonesia")
+
+ggplot(scores, aes(PC1, PC2)) +
+  geom_hline(yintercept = 0, colour = "grey85") +
+  geom_vline(xintercept = 0, colour = "grey85") +
+  geom_point(aes(colour = continent), alpha = 0.75, size = 2) +
+  geom_segment(data = loadings,
+               aes(x = 0, y = 0,
+                   xend = arrow_mult * PC1, yend = arrow_mult * PC2),
+               arrow = arrow(length = unit(0.18, "cm")),
+               colour = "grey25", linewidth = 0.5) +
+  geom_text_repel(data = loadings,
+                  aes(arrow_mult * PC1, arrow_mult * PC2, label = var),
+                  size = 3.2, colour = "grey15", fontface = "bold",
+                  max.overlaps = Inf, box.padding = 0.35, seed = 7) +
+  geom_text_repel(data = filter(scores, country %in% pca_label),
+                  aes(label = country),
+                  size = 2.8, colour = "grey35",
+                  max.overlaps = Inf, box.padding = 0.3, seed = 7) +
+  scale_colour_manual(values = continent_pal, name = NULL) +
+  labs(title = "Affluence and cleanliness are separate dimensions",
+       subtitle = paste0("PCA of six energy and emissions indicators, ", eda_year,
+                          "; arrows show indicator loadings"),
+       x = paste0("PC1: affluence and energy throughput (",
+                  sprintf("%.0f", var_exp[1]), "% of variance)"),
+       y = paste0("PC2: cleanliness of the energy system (",
+                  sprintf("%.0f", var_exp[2]), "% of variance)"),
+       caption = owid_caption)
+```
+
+The decomposition is unusually clean. The first two components account for `r sprintf("%.0f", var_exp[1] + var_exp[2])` percent of the total variance, and their loadings admit a direct reading. PC1 (`r sprintf("%.0f", var_exp[1])` percent) is loaded chiefly by GDP per capita, energy per capita, and CO2 per capita, with a moderate negative loading on carbon intensity: it is an axis of affluence and energy throughput, along which countries range from lower-income economies such as Bangladesh to high-throughput states such as Qatar. PC2 (`r sprintf("%.0f", var_exp[2])` percent) is loaded by the renewable and low-carbon shares at one pole and by carbon intensity at the other: it is an axis of how cleanly a given quantity of energy is produced, with hydro- and nuclear-rich economies such as Norway, Sweden, and France at the top and fossil-dependent economies at the bottom. One caveat applies to the sample rather than the method: the complete-case requirement retains only `r n_pca` countries, because the detailed energy indicators are missing for many low-income economies, so the score cloud under-represents the poorest part of the income distribution.
+
+That these two axes emerge as nearly orthogonal components is the multivariate restatement of the near-zero correlation found in @sec-corr: how much energy and wealth a country commands and how cleanly it produces that energy are, empirically, independent dimensions of the data. The biplot also previews the report's later case studies, since the economies that anchor the corners of the score cloud — the wealthy-but-clean Nordic and French cluster, the wealthy-but-carbon-intensive Gulf states, and the populous industrialisers ascending along PC1 — are precisely those whose trajectories are examined in @sec-decoupling and @sec-oil.
 
 # The Global Trajectory {#sec-global}
 
