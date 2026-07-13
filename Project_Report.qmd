@@ -419,7 +419,7 @@ The correlation matrix below summarises the pairwise relationships among the rep
 
 ```{r eda-corr}
 #| label: fig-corr
-#| fig-cap: !expr 'paste0("Pairwise Pearson correlations across countries for ", eda_year, ", computed on complete cases. Warm cells denote positive associations and cool cells negative ones. The relationships that later receive dedicated figures are those with the strongest coefficients.")'
+#| fig-cap: !expr 'paste0("Pairwise Pearson correlations across countries for ", eda_year, ", computed on complete cases. Warm cells denote positive associations and cool cells negative ones. Because the matrix is symmetric, only the lower triangle is shown; the diagonal of ones is omitted. The relationships that later receive dedicated figures are those with the strongest coefficients.")'
 #| fig-height: 6
 
 corr_df <- energy |>
@@ -449,10 +449,14 @@ r_gdp_ren <- cmat["GDP/capita", "Renewable share"]
 rho_gdp_ren <- cor(corr_df$`GDP/capita`, corr_df$`Renewable share`,
                    method = "spearman")
 
+# The matrix is symmetric, so only the lower triangle (excluding the diagonal
+# of ones) is plotted; the dropped rows carry no additional information.
 corr_long <- as.data.frame(cmat) |>
   rownames_to_column("var1") |>
   pivot_longer(-var1, names_to = "var2", values_to = "r") |>
-  mutate(across(c(var1, var2), ~factor(.x, levels = rownames(cmat))))
+  mutate(across(c(var1, var2), ~factor(.x, levels = rownames(cmat)))) |>
+  filter(as.integer(var2) > as.integer(var1)) |>
+  mutate(var1 = droplevels(var1), var2 = droplevels(var2))
 
 ggplot(corr_long, aes(var1, var2, fill = r)) +
   geom_tile(colour = "white", linewidth = 0.6) +
