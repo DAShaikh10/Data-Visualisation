@@ -393,6 +393,8 @@ The most fundamental question in the transition debate is whether renewable capa
 ```{r q1-mix}
 #| label: fig-q1
 #| fig-cap: "Global primary energy consumption by source, 1990 to 2024. A rising total height indicates growing demand. The analytical question is whether the fossil bands contract in absolute terms, or merely grow more slowly than the renewable bands."
+#| fig-width: 12
+#| fig-height: 5
 
 mix_vars <- c(
   Coal = "coal_consumption", Oil = "oil_consumption", Gas = "gas_consumption",
@@ -409,13 +411,41 @@ global_mix <- energy_raw |>
                          levels = names(mix_vars))) |>
   filter(!is.na(twh))
 
-ggplot(global_mix, aes(year, twh, fill = source)) +
+# Order sources by cumulative TWh (ascending), so the largest source anchors
+# the bottom of the stack. The legend then reads top-to-bottom matching the
+# visible bands (Other renewables at top down to Coal at the bottom).
+source_order <- global_mix |>
+  group_by(source) |>
+  summarise(total = sum(twh, na.rm = TRUE), .groups = "drop") |>
+  arrange(total) |>
+  pull(source) |>
+  as.character()
+
+global_mix <- global_mix |>
+  mutate(source = factor(source, levels = source_order))
+
+# Left panel: absolute consumption
+p_abs <- ggplot(global_mix, aes(year, twh, fill = source)) +
   geom_area(colour = "white", linewidth = 0.1) +
-  scale_fill_manual(values = energy_pal, name = "Source") +
+  scale_fill_manual(values = energy_pal, name = NULL) +
   scale_y_continuous(labels = comma_format(suffix = " TWh")) +
-  labs(title = "Global energy demand continues to rise",
-       subtitle = "Primary energy consumption by source, 1990 to 2024",
-       x = NULL, y = "Consumption", caption = owid_caption)
+  labs(subtitle = "Absolute consumption", x = NULL, y = "Consumption")
+
+# Right panel: share of global total
+p_share <- ggplot(global_mix, aes(year, twh, fill = source)) +
+  geom_area(position = "fill", colour = "white", linewidth = 0.1) +
+  scale_fill_manual(values = energy_pal, name = NULL) +
+  scale_y_continuous(labels = label_percent()) +
+  labs(subtitle = "Share of global total", x = NULL, y = NULL)
+
+(p_abs + p_share) +
+  plot_layout(guides = "collect") +
+  plot_annotation(
+    title = "Global energy demand continues to rise",
+    subtitle = "Primary energy consumption by source, 1990 to 2024",
+    caption = owid_caption
+  ) &
+  theme(legend.position = "right")
 ```
 
 The aggregate stack rises throughout the period; global demand has not plateaued. Although solar and wind expand visibly, coal, oil, and gas have not contracted in absolute terms but have at most flattened. At the global scale, therefore, renewable generation has so far been additive, meeting incremental demand rather than displacing the established fossil base. This finding sets a deliberately sober frame for the remainder of the report, since every encouraging national case that follows must be read against a world that continues, in absolute terms, to burn more.
