@@ -1269,10 +1269,7 @@ The animation below plays the same fifteen countries' renewable share forward ye
 
 # Manual frame-by-frame renderer using magick instead of gganimate/gifski.
 # gganimate's internal frame queue occasionally hangs on some Apple Silicon
-# R setups with no error message; this version renders one ggsave() per year
-# (each printing a visible progress message, so you can see it is actually
-# working) and stitches the PNGs into a gif with magick, which uses a
-# completely separate code path. Requires: install.packages("magick").
+# Requires: install.packages("magick").
 # eval only for HTML output, since the PDF/Word targets cannot embed a gif.
 
 leader_countries <- change_tbl$country
