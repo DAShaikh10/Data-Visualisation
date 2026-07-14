@@ -41,8 +41,9 @@ library(countrycode)
 library(sf)
 library(rnaturalearth)
 library(gifski)
-#install.packages("gganimate")
 library(gganimate)
+library(magick)
+
 theme_report <- function() {
   theme_minimal(base_size = 12) +
     theme(
@@ -1144,7 +1145,6 @@ The animation below plays the same fifteen countries' renewable share forward ye
 # working) and stitches the PNGs into a gif with magick, which uses a
 # completely separate code path. Requires: install.packages("magick").
 # eval only for HTML output, since the PDF/Word targets cannot embed a gif.
-library(magick)
 
 leader_countries <- change_tbl$country
 
