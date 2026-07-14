@@ -1215,9 +1215,9 @@ n_total    <- nrow(change_tbl_region)
 top3       <- change_tbl |> slice_head(n = 3) |> pull(country)
 ```
 
-Of the fifteen fastest-moving economies, `r n_europe` of `r n_total` are in Europe, confirming that the momentum ranking is not evenly spread but concentrated in a specific policy environment — consistent with EU-level renewable targets and national feed-in-tariff schemes rather than a generalised global trend. The three fastest movers are `r paste(top3, collapse = ", ")`; *(replace this sentence with the specific policy instrument behind each of the three once you've confirmed the ranking against the rendered output — e.g. a feed-in tariff, an offshore wind auction programme, or an EU accession-linked target)*.
+Of the fifteen fastest-moving economies, `r n_europe` of `r n_total` are in Europe, confirming that the momentum ranking is not evenly spread but concentrated in a specific policy environment; consistent with EU-level renewable targets and national feed-in-tariff schemes rather than a generalised global trend. The three fastest movers are `r paste(top3, collapse = ", ")`.
 
-A bar chart of endpoint change, however, cannot distinguish a country that climbed steadily across fifteen years from one that surged late and plateaued — a distinction the report has treated as analytically important since the shock-recovery curves in @sec-shocks. The slope graph below adds that missing dimension in static form.
+A bar chart of endpoint change, however, cannot distinguish a country that climbed steadily across fifteen years from one that surged late and plateaued; a distinction the report has treated as analytically important since the shock-recovery curves in @sec-shocks. The slope graph below adds that missing dimension in static form.
 
 ```{r q5-slope}
 #| label: fig-q5-slope
@@ -1252,7 +1252,7 @@ ggplot(slope_df, aes(year, share, group = country)) +
 
 ## The path, not just the endpoint {#sec-scoreboard-animated}
 
-The animation below plays the same fifteen countries' renewable share forward year by year across the full `r start_yr`–`r end_yr` window, making the *shape* of each trajectory — steady, accelerating, or plateauing — directly visible rather than inferred from two endpoints.
+The animation below plays the same fifteen countries' renewable share forward year by year across the full `r start_yr`–`r end_yr` window, making the *shape* of each trajectory; steady, accelerating, or plateauing, directly visible rather than inferred from two endpoints.
 
 ```{r q5-animated}
 #| label: fig-q5-animated
@@ -1322,11 +1322,11 @@ image_write(gif_out, path = gif_path)
 knitr::include_graphics(gif_path)
 ```
 
-Read together with the map in @sec-map, these three figures reinforce the same conclusion from three angles: the leaders are concentrated in Western Europe, their gains are recent rather than gradual across the whole period, and — visible only in the animated view — several show the acceleration late in the window that a simple two-point comparison would understate. The appropriate criterion of leadership is therefore the rate of change, and specifically its recent trajectory, which identifies the economies driving the contemporary transition rather than those favoured by geographical endowment.
+Read together with the map in @sec-map, these three figures reinforce the same conclusion from three angles: the leaders are concentrated in Western Europe, their gains are recent rather than gradual across the whole period, and; visible only in the animated view; several show the acceleration late in the window that a simple two-point comparison would understate. The appropriate criterion of leadership is therefore the rate of change, and specifically its recent trajectory, which identifies the economies driving the contemporary transition rather than those favoured by geographical endowment.
 
 # Discussion and Conclusion {#sec-conclusion}
 
-Returning to the question posed at the outset — how, where, and why the world decarbonises unevenly — the analysis converges on a single answer: unevenness is driven by policy-mediated differences in energy-system composition, not by differences in wealth, and it is increasingly geographically concentrated even as global fossil demand keeps rising in absolute terms.
+Returning to the question posed at the outset; how, where, and why the world decarbonises unevenly, the analysis converges on a single answer: unevenness is driven by policy-mediated differences in energy-system composition, not by differences in wealth, and it is increasingly geographically concentrated even as global fossil demand keeps rising in absolute terms.
 
 ## Summary of findings {#sec-conclusion-summary}
 
