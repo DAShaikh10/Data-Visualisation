@@ -1,7 +1,14 @@
 ---
 title: "Global Energy Transition and the Emissions Footprint"
-subtitle: "A Visual Analysis of How, Where, and Why the World Decarbonises Unevenly"
-author: "Group 7: Hrusheekesh Sawarkar, Kseniia Holovchenko, Melisa Cihan, Danish Ali Abdul Kareem Shaikh,  Amaan Aslam Shaikh"
+subtitle: |
+  A Visual Analysis of How, Where, and Why the World Decarbonises Unevenly\
+  **Group 7**
+author:
+  - Melisa Cihan
+  - Amaan Aslam Shaikh
+  - Hrusheekesh Sawarkar
+  - Kseniia Holovchenko
+  - Danish Ali Abdul Kareem Shaikh
 date: today
 format:
   html:
