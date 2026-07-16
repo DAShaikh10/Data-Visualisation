@@ -47,9 +47,6 @@ library(patchwork)
 library(countrycode)
 library(sf)
 library(rnaturalearth)
-library(gifski)
-library(gganimate)
-library(magick)
 
 theme_report <- function() {
   theme_minimal(base_size = 12) +
@@ -616,13 +613,25 @@ ggplot(scree_df, aes(pc, var, group = 1)) +
 
 ```{r eda-biplot}
 #| label: fig-pca
-#| fig-cap: !expr 'paste0("PCA biplot of the six standardised indicators, ", eda_year, ". Points are countries, coloured by continent; arrows are the indicator loadings, scaled to the score range. PC1 separates countries by affluence and energy throughput, PC2 by the cleanliness of the energy system; the near-orthogonality of the two loading groups restates, in multivariate form, the near-zero correlation between wealth and renewable share.")'
+#| fig-cap: !expr 'paste0("PCA biplot of the six standardised indicators, ", eda_year, ". Points are countries, coloured by continent; arrows are the indicator loadings, scaled to the score range. The axes cross at the origin, which because PCA centres each score on its mean is the average country, so the four quadrants read directly (right of centre is above-average affluence, above centre is above-average cleanliness). The whole biplot is rigidly rotated so the affluence bundle (GDP, energy, CO2 per capita) lies horizontal; rotation preserves every angle and distance, so the near-right angle between that bundle and the cleanliness bundle (renewable and low-carbon share) is the visual form of their near-zero correlation from ", eda_year, ".")'
 #| fig-height: 6.5
 
 scores <- bind_cols(pca_df |> select(country, continent),
                     as_tibble(pca_fit$x))
 
 loadings <- as_tibble(pca_fit$rotation, rownames = "var")
+
+# Rotate the whole biplot rigidly so the affluence bundle (GDP, energy, CO2 per
+# capita) lies along the horizontal. Rotation preserves every angle and distance,
+# so the near-right angle to the cleanliness bundle becomes visible directly.
+aff_vars <- c("GDP/capita (log)", "Energy/capita (log)", "CO2/capita (log)")
+aff_dir  <- loadings |> filter(var %in% aff_vars) |> summarise(PC1 = mean(PC1), PC2 = mean(PC2))
+theta    <- -atan2(aff_dir$PC2, aff_dir$PC1)
+rot      <- function(x, y) list(x = x * cos(theta) - y * sin(theta),
+                                y = x * sin(theta) + y * cos(theta))
+
+scores[c("PC1", "PC2")]   <- rot(scores$PC1, scores$PC2)[c("x", "y")]
+loadings[c("PC1", "PC2")] <- rot(loadings$PC1, loadings$PC2)[c("x", "y")]
 
 # Scale the unit-length loadings up to the spread of the scores so arrows and
 # points share one readable coordinate system.
@@ -632,9 +641,17 @@ arrow_mult <- 0.8 * min(max(abs(scores$PC1)) / max(abs(loadings$PC1)),
 pca_label <- c("Norway", "Sweden", "France", "Qatar", "United Arab Emirates",
                "United States", "China", "India", "Bangladesh", "Indonesia")
 
+# Symmetric limits so the origin (the average country) sits at the centre.
+lim_x <- max(abs(c(scores$PC1, arrow_mult * loadings$PC1))) * 1.15
+lim_y <- max(abs(c(scores$PC2, arrow_mult * loadings$PC2))) * 1.15
+
 ggplot(scores, aes(PC1, PC2)) +
-  geom_hline(yintercept = 0, colour = "grey85") +
-  geom_vline(xintercept = 0, colour = "grey85") +
+  annotate("segment", x = -lim_x, xend = lim_x, y = 0, yend = 0,
+           colour = "grey60", linewidth = 0.4,
+           arrow = arrow(length = unit(0.2, "cm"), ends = "both")) +
+  annotate("segment", x = 0, xend = 0, y = -lim_y, yend = lim_y,
+           colour = "grey60", linewidth = 0.4,
+           arrow = arrow(length = unit(0.2, "cm"), ends = "both")) +
   geom_point(aes(colour = continent), alpha = 0.75, size = 2) +
   geom_segment(data = loadings,
                aes(x = 0, y = 0,
@@ -649,15 +666,21 @@ ggplot(scores, aes(PC1, PC2)) +
                   aes(label = country),
                   size = 2.8, colour = "grey35",
                   max.overlaps = Inf, box.padding = 0.3, seed = 7) +
+  annotate("text", x = lim_x, y = 0, hjust = 1, vjust = -0.6, size = 3,
+           fontface = "italic", colour = "grey30",
+           label = "affluence and energy throughput →") +
+  annotate("text", x = 0, y = lim_y, hjust = -0.03, vjust = 1, size = 3,
+           fontface = "italic", colour = "grey30",
+           label = "↑ cleaner energy system") +
   scale_colour_manual(values = continent_pal, name = NULL) +
+  coord_fixed(xlim = c(-lim_x, lim_x), ylim = c(-lim_y, lim_y)) +
   labs(title = "Affluence and cleanliness are separate dimensions",
        subtitle = paste0("PCA of six energy and emissions indicators, ", eda_year,
-                          "; arrows show indicator loadings"),
-       x = paste0("PC1: affluence and energy throughput (",
-                  sprintf("%.0f", var_exp[1]), "% of variance)"),
-       y = paste0("PC2: cleanliness of the energy system (",
-                  sprintf("%.0f", var_exp[2]), "% of variance)"),
-       caption = owid_caption)
+                          " (PC1 + PC2 = ", sprintf("%.0f", var_exp[1] + var_exp[2]),
+                          "% of variance); rotated so the two arrow bundles show their right angle"),
+       x = NULL, y = NULL, caption = owid_caption) +
+  theme(axis.text = element_blank(), axis.ticks = element_blank(),
+        panel.grid = element_blank())
 ```
 
 The decomposition is unusually clean. The first two components account for `r sprintf("%.0f", var_exp[1] + var_exp[2])` percent of the total variance, and their loadings admit a direct reading. PC1 (`r sprintf("%.0f", var_exp[1])` percent) is loaded chiefly by GDP per capita, energy per capita, and CO2 per capita, with a moderate negative loading on carbon intensity: it is an axis of affluence and energy throughput, along which countries range from lower-income economies such as Bangladesh to high-throughput states such as Qatar. PC2 (`r sprintf("%.0f", var_exp[2])` percent) is loaded by the renewable and low-carbon shares at one pole and by carbon intensity at the other: it is an axis of how cleanly a given quantity of energy is produced, with hydro- and nuclear-rich economies such as Norway, Sweden, and France at the top and fossil-dependent economies at the bottom. One caveat applies to the sample rather than the method: the complete-case requirement retains only `r n_pca` countries, because the detailed energy indicators are missing for many low-income economies, so the score cloud under-represents the poorest part of the income distribution.
@@ -1173,7 +1196,7 @@ This map isolates the modern transition by excluding hydroelectric and other leg
 
 # Which Countries Are Advancing Fastest {#sec-scoreboard}
 
-The preceding map cautions that a single-year renewable share rewards inherited hydroelectric capacity and obscures the economies that are changing most rapidly. The most informative measure of leadership is therefore the change in renewable share over time rather than its level at any one moment. Three views are used together: a static ranking of the largest gains, a slope graph that anchors each country's start and end position, and an animated trajectory that shows the *shape* of each country's climb rather than only its endpoint.
+The preceding map cautions that a single-year renewable share rewards inherited hydroelectric capacity and obscures the economies that are changing most rapidly. The most informative measure of leadership is therefore the change in renewable share over time rather than its level at any one moment. Three views are used together: a ranking of the largest gains, a slope graph that anchors each country's start and end position, and a full trajectory that shows the *shape* of each country's climb rather than only its endpoint.
 
 ```{r q5-leaders}
 #| label: fig-q5
@@ -1257,20 +1280,14 @@ ggplot(slope_df, aes(year, share, group = country)) +
        caption = owid_caption)
 ```
 
-## The path, not just the endpoint {#sec-scoreboard-animated}
+## The path, not just the endpoint {#sec-scoreboard-trajectory}
 
-The animation below plays the same fifteen countries' renewable share forward year by year across the full `r start_yr`–`r end_yr` window, making the *shape* of each trajectory; steady, accelerating, or plateauing, directly visible rather than inferred from two endpoints.
+The slope graph anchors only two years. Plotting the full `r start_yr`–`r end_yr` trajectory for the same fifteen countries makes the *shape* of each climb; steady, accelerating, or plateauing, directly visible rather than inferred from two endpoints.
 
-```{r q5-animated}
-#| label: fig-q5-animated
-#| fig-cap: !expr paste0("Animated trajectories of renewable share, ", start_yr, " to ", end_yr, ", for the fifteen fastest-moving economies. Each frame is one year; lines trace each country's full path rather than only its start and end point.")
+```{r q5-trajectory}
+#| label: fig-q5-trajectory
+#| fig-cap: !expr paste0("Renewable share of primary energy, ", start_yr, " to ", end_yr, ", for the fifteen fastest-moving economies. Each line is one country's full annual path; countries are coloured by their total gain and labelled at the final year. The curvature distinguishes steady climbers from economies that surged late in the window.")
 #| fig-height: 6
-#| eval: !expr knitr::is_html_output()
-
-# Manual frame-by-frame renderer using magick instead of gganimate/gifski.
-# gganimate's internal frame queue occasionally hangs on some Apple Silicon
-# Requires: install.packages("magick").
-# eval only for HTML output, since the PDF/Word targets cannot embed a gif.
 
 leader_countries <- change_tbl$country
 
@@ -1281,52 +1298,25 @@ traj_df <- energy |>
   left_join(change_tbl |> select(country, change_pp), by = "country") |>
   mutate(country = fct_reorder(country, change_pp))
 
-y_max <- max(traj_df$share, na.rm = TRUE) * 1.05
+end_labels <- traj_df |> group_by(country) |> filter(year == max(year)) |> ungroup()
 
-frame_dir <- "gif-cache/q5-frames"
-dir.create(frame_dir, showWarnings = FALSE, recursive = TRUE)
-
-years_seq   <- seq(start_yr, end_yr)
-frame_files <- character(length(years_seq))
-
-for (i in seq_along(years_seq)) {
-  yr <- years_seq[i]
-  message("Rendering frame ", i, " of ", length(years_seq), " (year ", yr, ")")
-
-  df_frame     <- traj_df |> filter(year <= yr)
-  labels_frame <- df_frame |> group_by(country) |>
-    filter(year == max(year)) |> ungroup()
-
-  p_frame <- ggplot(df_frame, aes(year, share, colour = country, group = country)) +
-    geom_line(linewidth = 1.1) +
-    geom_point(data = labels_frame, size = 2.4) +
-    geom_text(data = labels_frame, aes(label = country), hjust = -0.05,
-              size = 3.4, fontface = "bold") +
-    scale_colour_viridis_d(option = "viridis", guide = "none") +
-    scale_x_continuous(limits = c(start_yr, end_yr + 14),
-                       breaks = seq(start_yr, end_yr, 3)) +
-    scale_y_continuous(limits = c(0, y_max)) +
-    labs(title = paste0("Renewable share of primary energy: ", yr),
-         subtitle = "Fifteen fastest-moving economies, animated by year",
-         x = NULL, y = "Renewables share of primary energy (%)",
-         caption = owid_caption) +
-    coord_cartesian(clip = "off") +
-    theme(plot.margin = margin(5.5, 90, 5.5, 5.5))
-
-  fpath <- file.path(frame_dir, sprintf("frame_%03d.png", i))
-  ggsave(fpath, p_frame, width = 8, height = 5.5, dpi = 100)
-  frame_files[i] <- fpath
-}
-
-message("Stitching ", length(frame_files), " frames into gif...")
-gif_out <- image_animate(image_join(image_read(frame_files)), fps = 5, loop = 0)
-gif_path <- file.path(frame_dir, "renewable_trajectory.gif")
-image_write(gif_out, path = gif_path)
-
-knitr::include_graphics(gif_path)
+ggplot(traj_df, aes(year, share, colour = change_pp, group = country)) +
+  geom_line(linewidth = 1) +
+  geom_point(data = end_labels, size = 2) +
+  geom_text_repel(data = end_labels, aes(label = country), hjust = 0,
+                  nudge_x = 0.4, direction = "y", size = 2.9,
+                  segment.size = 0.2, seed = 7) +
+  scale_colour_viridis_c(option = "viridis", guide = "none") +
+  scale_x_continuous(breaks = seq(start_yr, end_yr, 3),
+                     limits = c(start_yr, end_yr + 6)) +
+  labs(title = "Steady climbers versus late sprinters",
+       subtitle = paste0("Renewable share of primary energy, ", start_yr,
+                          " to ", end_yr, " (fifteen fastest-moving economies)"),
+       x = NULL, y = "Renewables share of primary energy (%)",
+       caption = owid_caption)
 ```
 
-Read together with the map in @sec-map, these three figures reinforce the same conclusion from three angles: the leaders are concentrated in Western Europe, their gains are recent rather than gradual across the whole period, and; visible only in the animated view; several show the acceleration late in the window that a simple two-point comparison would understate. The appropriate criterion of leadership is therefore the rate of change, and specifically its recent trajectory, which identifies the economies driving the contemporary transition rather than those favoured by geographical endowment.
+Read together with the map in @sec-map, these three figures reinforce the same conclusion from three angles: the leaders are concentrated in Western Europe, their gains are recent rather than gradual across the whole period, and the trajectory view exposes an acceleration late in the window that a simple two-point comparison would understate. The appropriate criterion of leadership is therefore the rate of change, and specifically its recent trajectory, which identifies the economies driving the contemporary transition rather than those favoured by geographical endowment.
 
 # Discussion and Conclusion {#sec-conclusion}
 
