@@ -1066,11 +1066,11 @@ Wealth and energy structure explain why national footprints differ; the spatial 
 
 ## The eastward shift of the emissions centre of gravity {#sec-east}
 
-A long-run view of emissions by continent establishes the single most consequential fact about modern emissions, namely that their geographical centre of gravity has moved.
+A long-run view of emissions by continent, presented as paired absolute and relative panels in @fig-continents, establishes the single most consequential fact about modern emissions, namely that their geographical centre of gravity has moved.
 
 ```{r geo-continents}
 #| label: fig-continents
-#| fig-cap: "Annual CO2 emissions by continent, 1900 to 2022, shown two ways. The left panel gives absolute emissions in gigatonnes; the right panel gives each continent's share of the global total. Europe and North America dominate the twentieth century, whereas Asia overtakes both after 2000 and continues to rise. The relative panel isolates the compositional shift from the growth in the total, so the eastward displacement is visible even as every continent's absolute emissions rise. Antarctica, a countrycode artefact with negligible emissions, is excluded. The legend is vertical and ordered to match the top-to-bottom stacking of the bands."
+#| fig-cap: "Annual CO2 emissions by continent, 1900 to 2022, shown two ways. The left panel gives absolute emissions in gigatonnes; the right panel gives each continent's share of the global total. Europe and North America dominate the twentieth century, whereas Asia overtakes both after 2000 and continues to rise. The relative panel isolates the compositional shift from the growth in the total, so the eastward displacement is visible even as every continent's absolute emissions rise. Antarctica, a countrycode artefact (continent) with negligible emissions, is excluded. The legend is vertical and ordered to match the top-to-bottom stacking of the bands."
 #| fig-width: 12
 #| fig-height: 5
 
@@ -1117,11 +1117,11 @@ p_cont_rel <- ggplot(cont_co2, aes(year, total_co2, fill = continent)) +
   theme(legend.position = "right")
 ```
 
-For most of the twentieth century, global emissions were principally an Atlantic phenomenon. After 2000, Asia overtakes both Europe and North America and continues to climb, reflecting the rapid industrialisation of populous economies, China foremost among them. The relative panel sharpens the point: Asia's share of the global total rises from a small fraction at mid-century to a clear majority by 2022, while Europe's share contracts steadily, so the compositional shift is unmistakable even though every continent's absolute emissions grew. This eastward displacement provides essential context for the decarbonisation achieved in several Western economies, since those gains occur within a shrinking share of a growing global total, so national progress and global stagnation are not contradictory but complementary facts.
+The two panels of @fig-continents record a single displacement from complementary angles. For most of the twentieth century, global emissions were principally an Atlantic phenomenon. After 2000, Asia overtakes both Europe and North America and continues to climb, reflecting the rapid industrialisation of populous economies, China foremost among them. The relative panel sharpens the point: Asia's share of the global total rises from a small fraction at mid-century to a clear majority by 2022, while Europe's share contracts steadily, so the compositional shift is unmistakable even though every continent's absolute emissions grew. This eastward displacement provides essential context for the decarbonisation achieved in several Western economies, since those gains occur within a shrinking share of a growing global total, so national progress and global stagnation are not contradictory but complementary facts.
 
 ## Which countries emit the most, and how the ranking changed {#sec-race}
 
-The continental view is made concrete by examining the leading national emitters at the beginning and end of the modern period, which exposes the turnover behind the aggregate shift.
+The continental view is made concrete in @fig-emitter-ranking, which ranks the leading national emitters at the beginning and end of the modern period and exposes the turnover behind the aggregate shift.
 
 ```{r emitter-ranking}
 #| label: fig-emitter-ranking
@@ -1159,11 +1159,11 @@ ggplot(snap, aes(co2, country_ord, fill = continent)) +
        x = lab_co2_mt, y = NULL, caption = owid_caption)
 ```
 
-The comparison renders the eastward shift unambiguous. In 1990 the United States is the largest emitter by a wide margin, with the Soviet successor states and several European economies prominent in the upper ranks. By 2022 China occupies first place at more than twice the emissions of the United States, India has risen to third, and several European economies have fallen out of the leading group altogether. The composition of the ranking, and not merely the magnitudes within it, has been transformed, which is the national-level counterpart to the continental trajectory of the preceding figure. Because the membership of the leading group differs between the two years, the turnover in country labels is itself the substantive message. Within each panel, ties in the twelfth position are broken arbitrarily, which does not affect the visible pattern.
+The comparison in @fig-emitter-ranking renders the eastward shift unambiguous. In 1990 the United States is the largest emitter by a wide margin, with the Soviet successor states and several European economies prominent in the upper ranks. By 2022 China occupies first place at more than twice the emissions of the United States, India has risen to third, and several European economies have fallen out of the leading group altogether. The composition of the ranking, and not merely the magnitudes within it, has been transformed, which is the national-level counterpart to the continental trajectory of @fig-continents. Because the membership of the leading group differs between the two years, the turnover in country labels is itself the substantive message. Within each panel, ties in the twelfth position are broken arbitrarily, which does not affect the visible pattern.
 
 ## The contemporary spread of renewable energy {#sec-map}
 
-A final spatial view addresses where the modern wind-and-solar transition is actually taking place, and when. Because the headline renewables share conflates new wind and solar generation with long-established hydroelectric capacity, the map below plots the combined wind and solar share alone, which isolates the contemporary build-out from the hydroelectric legacy.
+A final spatial view addresses where the modern wind-and-solar transition is actually taking place, and when. Because the headline renewables share conflates new wind and solar generation with long-established hydroelectric capacity, @fig-map plots the combined wind and solar share alone, which isolates the contemporary build-out from the hydroelectric legacy.
 
 ```{r geo-map}
 #| label: fig-map
@@ -1190,16 +1190,7 @@ ws_share <- energy |>
                            primary_energy_consumption) |>
   select(iso_code, year, ws_share_energy)
 
-# Bin the share into explicit classes. The wind+solar share is near zero for
-# almost every country until recently (median 0.01%, 90th percentile ~5%), so a
-# continuous viridis scale mapped 0% to a dark colour and rendered the early
-# panels as an indistinct dark mass in which true zero and missing data were
-# impossible to tell apart. Cutting the share into labelled bins and mapping them
-# with a *discrete* fill scale fixes both problems at once: zero reads as
-# near-white, the emergence of colour becomes the signal, and — crucially — a
-# discrete legend renders as a simple row of swatches that stays anchored at the
-# bottom in every ggplot2 version, unlike the continuous colour bar, whose guide
-# reflowed into the right margin on some renderers.
+# Bin the share into explicit classes.
 ws_breaks <- c(0, 1, 2, 5, 10, 15, 20, Inf)
 ws_labels <- c("0–1", "1–2", "2–5", "5–10", "10–15", "15–20", "≥20")
 
@@ -1238,7 +1229,9 @@ ggplot(map_data) +
         legend.text = element_text(size = 8))
 ```
 
-This map isolates the modern transition by excluding hydroelectric and other legacy renewables. In 1990 and 2000 the world is almost uniformly blank: wind and solar supplied a negligible share of primary energy nearly everywhere, with only Denmark beginning to stand out. By 2010 a faint band of colour appears across north-western Europe, and by 2022 a pronounced cluster has emerged across Western Europe, led by Denmark, Portugal, Ireland, and Spain, alongside rising shares in parts of Asia. The binned pale-to-dark scale is what makes this legible: because almost every country sits near zero for most of the period, a scale on which zero reads as near-white lets the later emergence of colour carry the story, and the separate grey for countries without data keeps a genuine zero distinct from a mere absence of reporting. The contrast with the headline renewables figure is the point: whereas total renewable share is high in long-standing hydroelectric economies such as Norway and Brazil from the very first panel, the wind-and-solar share is close to zero everywhere until the present century and then concentrates in a specific set of countries. Mapping wind and solar separately therefore removes the conflation acknowledged earlier and shows the contemporary build-out for what it is, a recent and geographically concentrated phenomenon rather than an even global trend.
+The sequence of panels in @fig-map isolates the modern transition by excluding hydroelectric and other legacy renewables. In 1990 and 2000 the world is almost uniformly blank: wind and solar supplied a negligible share of primary energy nearly everywhere, with only Denmark beginning to stand out. By 2010 a faint band of colour appears across north-western Europe, and by 2022 a pronounced cluster has emerged across Western Europe, led by Denmark, Portugal, Ireland, and Spain, alongside rising shares in parts of Asia. The binned pale-to-dark scale is what makes this legible: because almost every country sits near zero for most of the period, a scale on which zero reads as near-white lets the later emergence of colour carry the story, and the separate grey for countries without data keeps a genuine zero distinct from a mere absence of reporting. The contrast with the headline renewables figure is the point: whereas total renewable share is high in long-standing hydroelectric economies such as Norway and Brazil from the very first panel, the wind-and-solar share is close to zero everywhere until the present century and then concentrates in a specific set of countries. Mapping wind and solar separately therefore removes the conflation acknowledged earlier and shows the contemporary build-out for what it is, a recent and geographically concentrated phenomenon rather than an even global trend.
+
+Taken together, the three spatial views expose a tension that frames the remainder of the report. The centre of gravity of emissions has moved decisively eastward, so that Asia now accounts for the majority of the global total, yet the modern wind-and-solar build-out remains concentrated in a small cluster of Western European economies whose own share of that total is contracting. Where emissions are produced and where the contemporary transition is taking hold are, on this evidence, two different maps. That divergence, between the geography of the problem and the geography of the response, is what makes the pace of national progress the pressing question, and it is that pace, rather than the static distribution examined here, to which the analysis now turns.
 
 
 # Which Countries Are Advancing Fastest {#sec-scoreboard}
