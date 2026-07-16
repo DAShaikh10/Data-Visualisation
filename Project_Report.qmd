@@ -743,8 +743,7 @@ global_mix <- energy_raw |>
   filter(!is.na(twh))
 
 # Order sources by cumulative TWh (ascending), so the largest source anchors
-# the bottom of the stack. The legend then reads top-to-bottom matching the
-# visible bands (Other renewables at top down to Coal at the bottom).
+# the bottom of the stack.
 source_order <- global_mix |>
   group_by(source) |>
   summarise(total = sum(twh, na.rm = TRUE), .groups = "drop") |>
@@ -755,14 +754,12 @@ source_order <- global_mix |>
 global_mix <- global_mix |>
   mutate(source = factor(source, levels = source_order))
 
-# Left panel: absolute consumption
 p_abs <- ggplot(global_mix, aes(year, twh, fill = source)) +
   geom_area(colour = "white", linewidth = 0.1) +
   scale_fill_manual(values = energy_pal, name = NULL) +
   scale_y_continuous(labels = comma_format(suffix = " TWh")) +
   labs(subtitle = "Absolute consumption", x = NULL, y = "Consumption")
 
-# Right panel: share of global total
 p_share <- ggplot(global_mix, aes(year, twh, fill = source)) +
   geom_area(position = "fill", colour = "white", linewidth = 0.1) +
   scale_fill_manual(values = energy_pal, name = NULL) +
@@ -807,10 +804,7 @@ ggplot(world_co2, aes(year, co2)) +
   geom_line(linewidth = 1.1, colour = "#B2182B") +
   geom_point(data = filter(world_co2, year %in% shocks$year),
              size = 2.6, colour = "#B2182B") +
-  # Labels anchored low (near the x-axis) and rotated to grow upward, rather
-  # than anchored to the curve or floating in the top margin. Emissions sit
-  # well above 30,000 Mt at all three shock years, so a low anchor leaves the
-  # labels entirely beneath the line with wide clearance.
+ # Anchor labels near the x-axis to prevent overlapping the emissions line (>30k Mt).
   geom_text(data = shocks, aes(x = year, y = 1200, label = label),
             angle = 90, hjust = 0, vjust = 0.5, nudge_x = -0.5, size = 2.8,
             colour = "grey40", inherit.aes = FALSE) +
