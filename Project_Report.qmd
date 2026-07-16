@@ -1,8 +1,14 @@
 ---
 title: "Global Energy Transition and the Emissions Footprint"
-subtitle: "A Visual Analysis of How, Where, and Why the World Decarbonises Unevenly"
-author: "Group 7: Hrusheekesh Sawarkar, Kseniia Holovchenko, Melisa Cihan, Danish Ali Abdul Kareem Shaikh,  Amaan Aslam Shaikh"
-date: today
+subtitle: |
+  A Visual Analysis of How, Where, and Why the World Decarbonises Unevenly\
+  **Group 7**
+author:
+  - Melisa Cihan
+  - Amaan Shaikh
+  - Danish Ali Shaikh
+  - Hrusheekesh Sawarkar
+  - Kseniia Holovchenko
 format:
   html:
     toc: true
@@ -16,6 +22,24 @@ format:
     theme: cosmo
     embed-resources: true
     fig-cap-location: bottom
+    format-links: false
+    include-in-header:
+      text: |
+        <style>
+        /* Quarto lays the title meta out as a two-column grid, so a lone author
+           block is squeezed into half the page and names break mid-word. Give it
+           the full width and flow the authors inline, breaking only between names. */
+        .quarto-title-meta { display: block; }
+        .quarto-title-meta-contents { white-space: nowrap; }
+        .quarto-title-meta-contents p {
+          display: inline;
+          margin-bottom: 0;
+        }
+        .quarto-title-meta-contents p:not(:last-child)::after {
+          content: " · ";
+          color: #adb5bd;
+        }
+        </style>
   pdf:
     toc: true
     toc-depth: 2
@@ -239,7 +263,7 @@ knitr::kable(panel_overview, format.args = list(big.mark = ","))
 
 The contrast in @tbl-panel is informative in itself. The emissions panel runs far longer and holds more than twice as many observations, because OWID extends the CO2 record back into the eighteenth and nineteenth centuries for the early industrialisers, whereas the detailed energy-mix series begin only in the twentieth century. Mean completeness is below one half in both panels, confirming that the nominal country–year grid is sparsely populated and that the modern, well-covered window adopted throughout the report is a necessary restriction rather than a stylistic choice.
 
-That sparsity has a temporal structure which a single completeness figure cannot convey, so the next figure traces, year by year, how many countries report each of four core indicators. It shows directly when the panel becomes dense enough to support cross-country comparison and why the reference year cannot simply be the final year of the record.
+That sparsity has a temporal structure which a single completeness figure cannot convey, so @fig-coverage traces, year by year, how many countries report each of four core indicators. It shows directly when the panel becomes dense enough to support cross-country comparison and why the reference year cannot simply be the final year of the record.
 
 ```{r eda-coverage}
 #| label: fig-coverage
@@ -280,9 +304,9 @@ ggplot(cov_long, aes(year, n, colour = indicator)) +
        x = NULL, y = "Countries reporting", caption = owid_caption)
 ```
 
-The figure explains three decisions made earlier. First, the energy indicators are entirely absent before 1965 and reach broad coverage only around 1980, which is why every energy-mix comparison in the report is confined to the modern era. Second, the renewables-share series never rises much above eighty countries, because the detailed fuel-mix data derive from the Energy Institute's *Statistical Review*, which covers only the larger energy economies; every analysis that conditions on renewable share therefore works with a smaller and somewhat wealthier sample than the emissions record suggests. Third, the GDP curve stops entirely at the right-hand edge: the Maddison series has simply not yet been compiled for the latest years. The reference year `r eda_year` is the last year before that termination, which is precisely what the automatic selection rule in @sec-eda was designed to achieve; fixing the reference year at the end of the emissions series instead would silently discard every economy from the GDP-dependent figures.
+@fig-coverage explains three decisions made earlier. First, the energy indicators are entirely absent before 1965 and reach broad coverage only around 1980, which is why every energy-mix comparison in the report is confined to the modern era. Second, the renewables-share series never rises much above eighty countries, because the detailed fuel-mix data derive from the Energy Institute's *Statistical Review*, which covers only the larger energy economies; every analysis that conditions on renewable share therefore works with a smaller and somewhat wealthier sample than the emissions record suggests. Third, the GDP curve stops entirely at the right-hand edge: the Maddison series has simply not yet been compiled for the latest years. The reference year `r eda_year` is the last year before that termination, which is precisely what the automatic selection rule in @sec-eda was designed to achieve; fixing the reference year at the end of the emissions series instead would silently discard every economy from the GDP-dependent figures.
 
-The next table moves from the structure of the panels to the seven indicators used throughout the report, summarising each for the chosen reference year by its centre, spread, and range alongside the number of countries reporting it. The gap between the mean and the median in several rows previews the right-skew documented in @sec-dist, and the coverage column shows which indicators are most affected by missingness.
+@tbl-summary moves from the structure of the panels to the seven indicators used throughout the report, summarising each for the chosen reference year by its centre, spread, and range alongside the number of countries reporting it. The gap between the mean and the median in several rows previews the right-skew documented in @sec-dist, and the coverage column shows which indicators are most affected by missingness.
 
 ```{r eda-summary-table}
 #| label: tbl-summary
@@ -294,7 +318,7 @@ summary_df <- co2 |>
             `GDP per capita (int-USD)` = gdp / population,
             `CO2 per capita (t)`       = co2_per_capita,
             `CO2 per GDP (kg/USD)`     = co2_per_gdp,
-            `Carbon intensity (kg/kWh)`= co2_per_unit_energy) |>
+            `Carbon intensity (g/kWh)` = co2_per_unit_energy) |>
   left_join(
     energy |> filter(year == eda_year) |>
       select(iso_code,
@@ -305,6 +329,9 @@ summary_df <- co2 |>
   ) |>
   select(-iso_code)
 
+# A single signif() across indicators spanning 0.2 to 132,000 forces scientific
+# notation. Instead each row is formatted at a precision set by its own median,
+# so every statistic reads as a plain number.
 summary_tbl <- summary_df |>
   pivot_longer(everything(), names_to = "Indicator", values_to = "value") |>
   filter(!is.na(value)) |>
@@ -317,17 +344,25 @@ summary_tbl <- summary_df |>
             Min     = min(value),
             Max     = max(value),
             .groups = "drop") |>
+  # Order rows as the report introduces them rather than alphabetically.
+  mutate(Indicator = factor(Indicator, levels = names(summary_df))) |>
+  arrange(Indicator) |>
+  mutate(digits = case_when(Median >= 100 ~ 0, Median >= 10 ~ 1,
+                            Median >= 1 ~ 2, TRUE ~ 3)) |>
+  rowwise() |>
   mutate(across(c(Mean, Median, SD, IQR, Min, Max),
-                ~ signif(.x, 3)))
+                ~ formatC(.x, format = "f", digits = digits, big.mark = ","))) |>
+  ungroup() |>
+  select(-digits)
 
-knitr::kable(summary_tbl, format.args = list(big.mark = ","))
+knitr::kable(summary_tbl, align = c("l", rep("r", 7)))
 ```
 
-A few features stand out even before the dedicated figures. Per-capita GDP, per-capita CO2, and energy use each span more than two orders of magnitude across countries, so their means sit well above their medians; the renewable and low-carbon shares, being bounded between zero and one hundred, are less extreme but still markedly uneven; and carbon intensity is comparatively compact, reflecting the shared physics of combustion. These shapes are the reason the report relies on medians, logarithmic axes, and distribution plots rather than on means alone.
+A few features of @tbl-summary stand out even before the dedicated figures. Per-capita GDP, per-capita CO2, and energy use each span more than two orders of magnitude across countries, so their means sit well above their medians; the renewable and low-carbon shares, being bounded between zero and one hundred, are less extreme but still markedly uneven; and carbon intensity is comparatively compact, reflecting the shared physics of combustion. These shapes are the reason the report relies on medians, logarithmic axes, and distribution plots rather than on means alone.
 
 ## Distribution of the principal indicators {#sec-dist}
 
-Summary means are unreliable descriptors when a variable is heavily skewed. The four quantities on which the report most depends are therefore examined directly for the reference year.
+Summary means are unreliable descriptors when a variable is heavily skewed. The four quantities on which the report most depends are therefore examined directly for the reference year in @fig-distributions.
 
 ```{r eda-distributions}
 #| label: fig-distributions
@@ -373,9 +408,9 @@ ren_stats <- energy |>
   summarise(med_ren = median(renewables_share_energy, na.rm = TRUE))
 ```
 
-Three of the four distributions exhibit a pronounced right tail. The median country emits about `r round(dist_stats$med_co2, 1)` tonnes of CO2 per capita, whereas several petro-states approach `r round(dist_stats$max_co2, 0)`; the median renewable share is near `r round(ren_stats$med_ren, 0)` percent, with only a limited cluster of leaders above fifty. This skewness is itself informative, since it indicates that the typical country differs substantially from the high-profile extremes, and it justifies the logarithmic axes adopted in @sec-decoupling, without which the numerous small economies would be compressed into an uninformative margin.
+Three of the four panels in @fig-distributions exhibit a pronounced right tail. The median country emits about `r round(dist_stats$med_co2, 1)` tonnes of CO2 per capita, whereas several petro-states approach `r round(dist_stats$max_co2, 0)`; the median renewable share is near `r round(ren_stats$med_ren, 0)` percent, with only a limited cluster of leaders above fifty. This skewness is itself informative, since it indicates that the typical country differs substantially from the high-profile extremes, and it justifies the logarithmic axes adopted in @sec-decoupling, without which the numerous small economies would be compressed into an uninformative margin.
 
-The pooled histograms conceal where in the world the tail countries sit, so the same emissions variable is next broken out by continent. This adds a first geographical dimension to the distributional story and anticipates the spatial analysis of @sec-geo.
+The pooled histograms conceal where in the world the tail countries sit, so @fig-box-continent breaks the same emissions variable out by continent. This adds a first geographical dimension to the distributional story and anticipates the spatial analysis of @sec-geo.
 
 ```{r eda-boxplot}
 #| label: fig-box-continent
@@ -411,15 +446,15 @@ ggplot(box_df, aes(continent, co2_per_capita)) +
        x = NULL, y = lab_co2_pc, caption = owid_caption)
 ```
 
-The ordering of medians runs from Africa, where the median country emits well under one tonne per person, through the Americas and Asia to Europe and Oceania. Yet the within-continent spread is the more consequential feature: Asia alone spans the entire global range, containing both some of the lowest per-capita emitters and, in the Gulf states, the very highest. Continental membership is therefore a poor predictor of an individual country's footprint, which reinforces the report's emphasis on country-level structure over regional generalisation.
+The ordering of medians in @fig-box-continent runs from Africa, where the median country emits well under one tonne per person, through the Americas and Asia to Europe and Oceania. Yet the within-continent spread is the more consequential feature: Asia alone spans the entire global range, containing both some of the lowest per-capita emitters and, in the Gulf states, the very highest. Continental membership is therefore a poor predictor of an individual country's footprint, which reinforces the report's emphasis on country-level structure over regional generalisation.
 
 ## Correlation structure of the core indicators {#sec-corr}
 
-The correlation matrix below summarises the pairwise relationships among the report's central indicators. It serves both as a diagnostic, identifying which relationships warrant a dedicated figure, and as an early indication of the report's organising tension.
+The correlation matrix in @fig-corr summarises the pairwise relationships among the report's central indicators. It serves both as a diagnostic, identifying which relationships warrant a dedicated figure, and as an early indication of the report's organising tension.
 
 ```{r eda-corr}
 #| label: fig-corr
-#| fig-cap: !expr 'paste0("Pairwise Pearson correlations across countries for ", eda_year, ", computed on complete cases. Warm cells denote positive associations and cool cells negative ones. The relationships that later receive dedicated figures are those with the strongest coefficients.")'
+#| fig-cap: !expr 'paste0("Pairwise Pearson correlations across countries for ", eda_year, ", computed on complete cases. Warm cells denote positive associations and cool cells negative ones. Because the matrix is symmetric, only the lower triangle is shown; the diagonal of ones is omitted. The relationships that later receive dedicated figures are those with the strongest coefficients.")'
 #| fig-height: 6
 
 corr_df <- energy |>
@@ -449,10 +484,14 @@ r_gdp_ren <- cmat["GDP/capita", "Renewable share"]
 rho_gdp_ren <- cor(corr_df$`GDP/capita`, corr_df$`Renewable share`,
                    method = "spearman")
 
+# The matrix is symmetric, so only the lower triangle (excluding the diagonal
+# of ones) is plotted; the dropped rows carry no additional information.
 corr_long <- as.data.frame(cmat) |>
   rownames_to_column("var1") |>
   pivot_longer(-var1, names_to = "var2", values_to = "r") |>
-  mutate(across(c(var1, var2), ~factor(.x, levels = rownames(cmat))))
+  mutate(across(c(var1, var2), ~factor(.x, levels = rownames(cmat)))) |>
+  filter(as.integer(var2) > as.integer(var1)) |>
+  mutate(var1 = droplevels(var1), var2 = droplevels(var2))
 
 ggplot(corr_long, aes(var1, var2, fill = r)) +
   geom_tile(colour = "white", linewidth = 0.6) +
@@ -468,9 +507,9 @@ ggplot(corr_long, aes(var1, var2, fill = r)) +
         panel.grid = element_blank())
 ```
 
-Three features of the matrix are analytically consequential. First, wealthier countries consume substantially more energy per capita and, correspondingly, emit more per capita, reflecting the historical coupling of prosperity to fossil-fuelled industrial activity. Second, and more encouragingly, a higher renewable share is associated with markedly lower carbon intensity, indicating that altering the composition of energy supply genuinely reduces the emissions embodied in each unit of energy consumed. Third, and most importantly for what follows, the correlation between GDP per capita and renewable share is close to zero (Pearson *r* = `r sprintf("%.2f", r_gdp_ren)`, Spearman *ρ* = `r sprintf("%.2f", rho_gdp_ren)`, the two agreeing despite the skew). National wealth, in other words, does not determine how clean a country's energy system is. This near-absence of association is the empirical seed of the report's central question, addressed directly in @sec-decoupling: if income alone does not govern energy cleanliness, what does?
+Three features of @fig-corr are analytically consequential. First, wealthier countries consume substantially more energy per capita and, correspondingly, emit more per capita, reflecting the historical coupling of prosperity to fossil-fuelled industrial activity. Second, and more encouragingly, a higher renewable share is associated with markedly lower carbon intensity, indicating that altering the composition of energy supply genuinely reduces the emissions embodied in each unit of energy consumed. Third, and most importantly for what follows, the correlation between GDP per capita and renewable share is close to zero (Pearson *r* = `r sprintf("%.2f", r_gdp_ren)`, Spearman *ρ* = `r sprintf("%.2f", rho_gdp_ren)`, the two agreeing despite the skew). National wealth, in other words, does not determine how clean a country's energy system is. This near-absence of association is the empirical seed of the report's central question, addressed directly in @sec-decoupling: if income alone does not govern energy cleanliness, what does?
 
-Because a single coefficient can conceal structure — a strong nonlinear relationship, or two offsetting clusters, can each produce a correlation near zero — the decisive cell of the matrix is examined directly as a scatterplot before any conclusion is drawn from it.
+Because a single coefficient can conceal structure — a strong nonlinear relationship, or two offsetting clusters, can each produce a correlation near zero — the decisive cell of the matrix is examined directly as a scatterplot in @fig-gdp-ren before any conclusion is drawn from it.
 
 ```{r eda-gdp-ren}
 #| label: fig-gdp-ren
@@ -510,7 +549,7 @@ ggplot(gdp_ren, aes(gdp_pc, ren)) +
        caption = owid_caption)
 ```
 
-The scatterplot confirms that the near-zero coefficient is genuine rather than an artefact of averaging. The fitted line is flat across two orders of magnitude of income, and no curvature or clustering emerges that a linear coefficient might have missed. The most instructive contrasts are vertical rather than horizontal: Norway and Qatar command almost identical GDP per capita yet occupy opposite ends of the renewable axis, while in the middle of the income range Brazil's hydroelectric endowment lifts its renewable share to nearly one half, far above similarly placed fossil-dependent economies. Whatever separates clean from carbon-intensive energy systems, it is visible at every income level, and it is not wealth itself.
+@fig-gdp-ren confirms that the near-zero coefficient is genuine rather than an artefact of averaging. The fitted line is flat across two orders of magnitude of income, and no curvature or clustering emerges that a linear coefficient might have missed. The most instructive contrasts are vertical rather than horizontal: Norway and Qatar command almost identical GDP per capita yet occupy opposite ends of the renewable axis, while in the middle of the income range Brazil's hydroelectric endowment lifts its renewable share to nearly one half, far above similarly placed fossil-dependent economies. Whatever separates clean from carbon-intensive energy systems, it is visible at every income level, and it is not wealth itself.
 
 ## A low-dimensional view: principal component analysis {#sec-pca}
 
@@ -602,13 +641,25 @@ ggplot(scree_df, aes(pc, var, group = 1)) +
 
 ```{r eda-biplot}
 #| label: fig-pca
-#| fig-cap: !expr 'paste0("PCA biplot of the six standardised indicators, ", eda_year, ". Points are countries, coloured by continent; arrows are the indicator loadings, scaled to the score range. PC1 separates countries by affluence and energy throughput, PC2 by the cleanliness of the energy system; the near-orthogonality of the two loading groups restates, in multivariate form, the near-zero correlation between wealth and renewable share.")'
+#| fig-cap: !expr 'paste0("PCA biplot of the six standardised indicators, ", eda_year, ". Points are countries, coloured by continent; arrows are the indicator loadings, scaled to the score range. The axes cross at the origin, which because PCA centres each score on its mean is the average country, so the four quadrants read directly (right of centre is above-average affluence, above centre is above-average cleanliness). The whole biplot is rigidly rotated so the affluence bundle (GDP, energy, CO2 per capita) lies horizontal; rotation preserves every angle and distance, so the near-right angle between that bundle and the cleanliness bundle (renewable and low-carbon share) is the visual form of their near-zero correlation from ", eda_year, ".")'
 #| fig-height: 6.5
 
 scores <- bind_cols(pca_df |> select(country, continent),
                     as_tibble(pca_fit$x))
 
 loadings <- as_tibble(pca_fit$rotation, rownames = "var")
+
+# Rotate the whole biplot rigidly so the affluence bundle (GDP, energy, CO2 per
+# capita) lies along the horizontal. Rotation preserves every angle and distance,
+# so the near-right angle to the cleanliness bundle becomes visible directly.
+aff_vars <- c("GDP/capita (log)", "Energy/capita (log)", "CO2/capita (log)")
+aff_dir  <- loadings |> filter(var %in% aff_vars) |> summarise(PC1 = mean(PC1), PC2 = mean(PC2))
+theta    <- -atan2(aff_dir$PC2, aff_dir$PC1)
+rot      <- function(x, y) list(x = x * cos(theta) - y * sin(theta),
+                                y = x * sin(theta) + y * cos(theta))
+
+scores[c("PC1", "PC2")]   <- rot(scores$PC1, scores$PC2)[c("x", "y")]
+loadings[c("PC1", "PC2")] <- rot(loadings$PC1, loadings$PC2)[c("x", "y")]
 
 # Scale the unit-length loadings up to the spread of the scores so arrows and
 # points share one readable coordinate system.
@@ -618,9 +669,17 @@ arrow_mult <- 0.8 * min(max(abs(scores$PC1)) / max(abs(loadings$PC1)),
 pca_label <- c("Norway", "Sweden", "France", "Qatar", "United Arab Emirates",
                "United States", "China", "India", "Bangladesh", "Indonesia")
 
+# Symmetric limits so the origin (the average country) sits at the centre.
+lim_x <- max(abs(c(scores$PC1, arrow_mult * loadings$PC1))) * 1.15
+lim_y <- max(abs(c(scores$PC2, arrow_mult * loadings$PC2))) * 1.15
+
 ggplot(scores, aes(PC1, PC2)) +
-  geom_hline(yintercept = 0, colour = "grey85") +
-  geom_vline(xintercept = 0, colour = "grey85") +
+  annotate("segment", x = -lim_x, xend = lim_x, y = 0, yend = 0,
+           colour = "grey60", linewidth = 0.4,
+           arrow = arrow(length = unit(0.2, "cm"), ends = "both")) +
+  annotate("segment", x = 0, xend = 0, y = -lim_y, yend = lim_y,
+           colour = "grey60", linewidth = 0.4,
+           arrow = arrow(length = unit(0.2, "cm"), ends = "both")) +
   geom_point(aes(colour = continent), alpha = 0.75, size = 2) +
   geom_segment(data = loadings,
                aes(x = 0, y = 0,
@@ -635,20 +694,26 @@ ggplot(scores, aes(PC1, PC2)) +
                   aes(label = country),
                   size = 2.8, colour = "grey35",
                   max.overlaps = Inf, box.padding = 0.3, seed = 7) +
+  annotate("text", x = lim_x, y = 0, hjust = 1, vjust = -0.6, size = 3,
+           fontface = "italic", colour = "grey30",
+           label = "affluence and energy throughput →") +
+  annotate("text", x = 0, y = lim_y, hjust = -0.03, vjust = 1, size = 3,
+           fontface = "italic", colour = "grey30",
+           label = "↑ cleaner energy system") +
   scale_colour_manual(values = continent_pal, name = NULL) +
+  coord_fixed(xlim = c(-lim_x, lim_x), ylim = c(-lim_y, lim_y)) +
   labs(title = "Affluence and cleanliness are separate dimensions",
        subtitle = paste0("PCA of six energy and emissions indicators, ", eda_year,
-                          "; arrows show indicator loadings"),
-       x = paste0("PC1: affluence and energy throughput (",
-                  sprintf("%.0f", var_exp[1]), "% of variance)"),
-       y = paste0("PC2: cleanliness of the energy system (",
-                  sprintf("%.0f", var_exp[2]), "% of variance)"),
-       caption = owid_caption)
+                          " (PC1 + PC2 = ", sprintf("%.0f", var_exp[1] + var_exp[2]),
+                          "% of variance); rotated so the two arrow bundles show their right angle"),
+       x = NULL, y = NULL, caption = owid_caption) +
+  theme(axis.text = element_blank(), axis.ticks = element_blank(),
+        panel.grid = element_blank())
 ```
 
-The decomposition is unusually clean. The first two components account for `r sprintf("%.0f", var_exp[1] + var_exp[2])` percent of the total variance, and their loadings admit a direct reading. PC1 (`r sprintf("%.0f", var_exp[1])` percent) is loaded chiefly by GDP per capita, energy per capita, and CO2 per capita, with a moderate negative loading on carbon intensity: it is an axis of affluence and energy throughput, along which countries range from lower-income economies such as Bangladesh to high-throughput states such as Qatar. PC2 (`r sprintf("%.0f", var_exp[2])` percent) is loaded by the renewable and low-carbon shares at one pole and by carbon intensity at the other: it is an axis of how cleanly a given quantity of energy is produced, with hydro- and nuclear-rich economies such as Norway, Sweden, and France at the top and fossil-dependent economies at the bottom. One caveat applies to the sample rather than the method: the complete-case requirement retains only `r n_pca` countries, because the detailed energy indicators are missing for many low-income economies, so the score cloud under-represents the poorest part of the income distribution.
+The decomposition, shown in @fig-scree, is unusually clean. The first two components account for `r sprintf("%.0f", var_exp[1] + var_exp[2])` percent of the total variance, and their loadings, plotted as arrows in @fig-pca, admit a direct reading. PC1 (`r sprintf("%.0f", var_exp[1])` percent) is loaded chiefly by GDP per capita, energy per capita, and CO2 per capita, with a moderate negative loading on carbon intensity: it is an axis of affluence and energy throughput, along which countries range from lower-income economies such as Bangladesh to high-throughput states such as Qatar. PC2 (`r sprintf("%.0f", var_exp[2])` percent) is loaded by the renewable and low-carbon shares at one pole and by carbon intensity at the other: it is an axis of how cleanly a given quantity of energy is produced, with hydro- and nuclear-rich economies such as Norway, Sweden, and France at the top and fossil-dependent economies at the bottom. One caveat applies to the sample rather than the method: the complete-case requirement retains only `r n_pca` countries, because the detailed energy indicators are missing for many low-income economies, so the score cloud under-represents the poorest part of the income distribution.
 
-That these two axes emerge as nearly orthogonal components is the multivariate restatement of the near-zero correlation found in @sec-corr: how much energy and wealth a country commands and how cleanly it produces that energy are, empirically, independent dimensions of the data. The biplot also previews the report's later case studies, since the economies that anchor the corners of the score cloud — the wealthy-but-clean Nordic and French cluster, the wealthy-but-carbon-intensive Gulf states, and the populous industrialisers ascending along PC1 — are precisely those whose trajectories are examined in @sec-decoupling and @sec-oil.
+That these two axes emerge in @fig-pca as nearly orthogonal components is the multivariate restatement of the near-zero correlation found in @sec-corr: how much energy and wealth a country commands and how cleanly it produces that energy are, empirically, independent dimensions of the data. The biplot also previews the report's later case studies, since the economies that anchor the corners of the score cloud — the wealthy-but-clean Nordic and French cluster, the wealthy-but-carbon-intensive Gulf states, and the populous industrialisers ascending along PC1 — are precisely those whose trajectories are examined in @sec-decoupling and @sec-oil.
 
 # The Global Trajectory {#sec-global}
 
@@ -831,7 +896,7 @@ Having shown that the energy mix governs emissions, the analysis now asks whethe
 
 ## Five economies and the oil crises of the 1970s {#sec-oil}
 
-The oil shocks of 1973 and 1979 confronted every industrialised importer with the same abrupt increase in the price and insecurity of oil. Whether this common shock produced a common response is examined through five economies selected to span the plausible range of reactions: France, which pursued an exceptionally rapid nuclear programme; Sweden, which combined nuclear expansion with abundant hydroelectric capacity; Japan, an import-dependent economy that turned partly to nuclear power; and the United Kingdom and the United States, two market-oriented economies in which oil and coal remained dominant. Presenting the five as small multiples converts what would otherwise be an anecdote about France into a structured comparison.
+The oil shocks of 1973 and 1979 confronted every industrialised importer with the same abrupt increase in the price and insecurity of oil. Whether this common shock produced a common response is examined through five economies selected to span the plausible range of reactions: France, which pursued an exceptionally rapid nuclear programme; Sweden, which combined nuclear expansion with abundant hydroelectric capacity; Japan, an import-dependent economy that turned partly to nuclear power; and the United Kingdom and the United States, two market-oriented economies in which oil and coal remained dominant. Presenting the five as small multiples, as in @fig-oil-mix, converts what would otherwise be an account of France alone into a structured comparison.
 
 ```{r oil-mix}
 #| label: fig-oil-mix
@@ -873,9 +938,9 @@ ggplot(mix_long, aes(year, twh, fill = source)) +
   theme(legend.position = "right")
 ```
 
-The figure reveals a divergence rather than a convergence of responses. Within fifteen years of the first shock, France and Sweden develop substantial low-carbon shares, a development that coincides with the French nuclear construction programme initiated under the Messmer Plan and, in Sweden, with the build-out of combined nuclear and hydroelectric capacity. Japan turns partly toward nuclear generation, consistent with its acute import dependence and limited domestic fossil resources. The United Kingdom and the United States, by contrast, remain predominantly fossil-bound throughout. The shock was common to all five; the response was not.
+The small-multiple panels of @fig-oil-mix reveal a divergence rather than a convergence of responses. Within fifteen years of the first shock, France and Sweden develop substantial low-carbon shares, a development that coincides with the French nuclear construction programme initiated under the Messmer Plan and, in Sweden, with the build-out of combined nuclear and hydroelectric capacity. Japan turns partly toward nuclear generation, consistent with its acute import dependence and limited domestic fossil resources. The United Kingdom and the United States, by contrast, remain predominantly fossil-bound throughout. The shock was common to all five; the response was not.
 
-A change in the composition of energy supply is climatically meaningful only insofar as it lowers the carbon intensity of energy, that is, the emissions released per unit of energy consumed. The five economies are therefore ranked by the change in `co2_per_unit_energy` between 1973 and 2000, which reduces the comparison to a single interpretable figure per country.
+A change in the composition of energy supply is climatically meaningful only insofar as it lowers the carbon intensity of energy, that is, the emissions released per unit of energy consumed. The five economies are therefore ranked in @fig-oil-intensity by the change in `co2_per_unit_energy` between 1973 and 2000, which reduces the comparison to a single interpretable number per country.
 
 ```{r oil-intensity}
 #| label: fig-oil-intensity
@@ -919,15 +984,17 @@ ggplot(intensity_chg, aes(pct_change, country, fill = pct_change < 0)) +
 fr_drop <- intensity_chg |> filter(country == "France") |> pull(pct_change)
 ```
 
-The pattern in the data is consistent with a policy-mediated rather than a uniform Western turn away from fossil fuels. The two economies in which the state is documented to have directed a large low-carbon build-out, France through its nuclear programme and Sweden through combined nuclear and hydroelectric expansion, are also the two in which both the energy mix and its carbon intensity shifted most, with France's carbon intensity falling by about `r if (length(fr_drop)) sprintf("%.0f", abs(fr_drop)) else "40"` percent. The market-oriented economies, in which the response was left largely to prices, changed comparatively little once inexpensive oil returned in the mid-1980s. It should be stressed that this is an alignment between the observed trajectories and the historical record of policy, not a demonstration of causation: the dataset records what each energy system did, not why, and it cannot by itself rule out other contributing factors such as resource endowments, the timing of grid investment, or differing industrial structures. With that caveat, the close correspondence between the largest reductions and the most interventionist responses is striking, and it points to a recurring theme of the report, namely that the openings created by external shocks appear to be realised most fully where institutions act upon them.
+The pattern in @fig-oil-intensity is consistent with a policy-mediated rather than a uniform Western turn away from fossil fuels. The two economies in which the state is documented to have directed a large low-carbon build-out, France through its nuclear programme and Sweden through combined nuclear and hydroelectric expansion, are also the two in which both the energy mix and its carbon intensity shifted most, with France's carbon intensity falling by about `r if (length(fr_drop)) sprintf("%.0f", abs(fr_drop)) else "40"` percent. The market-oriented economies, in which the response was left largely to prices, changed comparatively little once inexpensive oil returned in the mid-1980s.
+
+It should be stressed that this is an alignment between the observed trajectories and the historical record of policy, not a demonstration of causation: the dataset records what each energy system did, not why, and it cannot by itself rule out other contributing factors such as resource endowments, the timing of grid investment, or differing industrial structures. With that caveat, the close correspondence between the largest reductions and the most interventionist responses remains striking.
 
 ## The COVID-19 demand shock and the rebound {#sec-covid}
 
-The COVID-19 pandemic of 2020 furnishes a contrasting natural experiment: an abrupt contraction in energy demand rather than a sustained increase in price. The pertinent question is whether the lockdowns suppressed fossil fuels more than renewables, and whether the 2021 recovery represented a return to the prior fossil-fuelled pattern of activity. A diverging bar chart of year-over-year change by source allows the contraction and the rebound to be read together.
+The COVID-19 pandemic of 2020 furnishes a contrasting natural experiment: an abrupt contraction in energy demand rather than a sustained increase in price. The pertinent question is whether the lockdowns suppressed fossil fuels more than renewables, and whether the 2021 recovery represented a return to the prior fossil-fuelled pattern of activity. @fig-covid, a diverging bar chart of year-over-year change by source, allows the contraction and the rebound to be read together.
 
 ```{r covid-bars}
 #| label: fig-covid
-#| fig-cap: "Year-over-year percentage change in global consumption by source. Fossil fuels exhibit a pronounced 2020 contraction followed by a strong 2021 rebound, whereas wind and solar grew in both years without interruption. Note that each 2021 percentage change is measured against the depressed 2020 base, so a large positive bar does not necessarily mean the source has returned to its 2019 volume; oil, in particular, had not."
+#| fig-cap: "Year-over-year percentage change in global consumption by source. Oil contracts sharply in 2020, coal more modestly, and gas barely at all, before all three rebound in 2021; nuclear also falls, whereas wind and solar grow in both years without interruption. Note that each 2021 percentage change is measured against the depressed 2020 base, so a large positive bar does not necessarily mean the source has returned to its 2019 volume; oil, in particular, had not."
 #| fig-height: 4.8
 
 covid <- energy_raw |>
@@ -949,6 +1016,17 @@ covid <- energy_raw |>
 
 oil_drop <- covid |>
   filter(source == "Oil", year == 2020) |> pull(pct)
+
+# Per-source 2020 changes quoted in the prose, so the text tracks the data
+# rather than a fixed number: oil is a sharp V, gas barely moves, and nuclear
+# (a low-carbon source) contracts more than coal.
+covid_2020 <- function(s) covid |> filter(source == s, year == 2020) |> pull(pct)
+coal_drop  <- covid_2020("Coal")
+gas_drop   <- covid_2020("Gas")
+nuc_drop   <- covid_2020("Nuclear")
+hydro_chg  <- covid_2020("Hydro")
+solar_2020 <- covid_2020("Solar")
+wind_2020  <- covid_2020("Wind")
 
 # Absolute levels (TWh) to distinguish a percentage rebound from a full
 # recovery of the volume lost: a positive 2021 percentage change is measured
@@ -974,7 +1052,13 @@ ggplot(covid, aes(pct, source, fill = period)) +
        x = "% change", y = NULL, caption = owid_caption)
 ```
 
-The asymmetry between sources is the central result. Oil, coal, and gas display a classic V-shaped profile, with a sharp contraction in 2020, deepest for oil at roughly `r sprintf("%.0f", abs(oil_drop))` percent, followed by a strong recovery in 2021, confirming that the rebound was a return to fossil-fuelled economic activity. One arithmetic point deserves emphasis, because a percentage rebound is measured against the depressed 2020 base and so can overstate the recovery: although oil's 2021 percentage gain is large, it did not fully restore the volume lost, and oil consumption in 2021 remained about `r sprintf("%s", format(round(oil_gap_2021), big.mark = ","))` TWh `r if (oil_recovered) "above" else "below"` its 2019 level, whereas coal and gas slightly exceeded theirs. Wind and solar, by contrast, scarcely register the lockdown and grow in both years. The explanation is structural rather than behavioural, since renewable output is governed by installed capacity rather than by current demand, so generating assets commissioned during 2020 continued to produce regardless of reductions in travel and industrial activity. Renewables are thus structurally insulated from demand shocks in a way that fossil fuels are not, a property that reinforces the broader finding that the transition is determined by the durable composition of the energy system rather than by transient fluctuations in demand.
+The asymmetry between sources in @fig-covid is the central result, though it is far sharper for some fossil fuels than for others. Oil alone traces a classic V: a steep contraction of roughly `r sprintf("%.0f", abs(oil_drop))` percent in 2020, the deepest of any source, followed by a strong rebound in 2021. Coal falls more modestly, by about `r sprintf("%.0f", abs(coal_drop))` percent, while gas barely moves at all, contracting only about `r sprintf("%.1f", abs(gas_drop))` percent; because the lockdowns fell hardest on transport, oil absorbed the greater part of the shock. A percentage rebound, moreover, is measured against the depressed 2020 base and so can overstate the recovery. Oil's large 2021 gain did not restore the volume lost: consumption in 2021 remained about `r sprintf("%s", format(round(oil_gap_2021), big.mark = ","))` TWh `r if (oil_recovered) "above" else "below"` its 2019 level, whereas coal and gas slightly exceeded theirs.
+
+The low-carbon sources did not respond as a single bloc either. Wind and solar scarcely register the lockdown, growing in both years, by roughly `r sprintf("%.0f", solar_2020)` and `r sprintf("%.0f", wind_2020)` percent respectively in 2020 alone, and hydro edged up about `r sprintf("%.1f", hydro_chg)` percent. Nuclear, however, contracted roughly `r sprintf("%.0f", abs(nuc_drop))` percent, a larger fall than coal. The insulation from the demand shock is therefore specific to wind and solar, whose output is fixed by installed capacity and near-zero marginal cost, so that generating assets commissioned during 2020 continued to produce regardless of reductions in travel and industrial activity. It does not extend to low-carbon energy in general: nuclear, a dispatchable source, tracked the fall in demand much as the fossil fuels did.
+
+One caveat qualifies the contrast. Wind and solar were already on a steep growth path before the pandemic, expanding at much the same rate in 2020 and 2021 as in the years around them, so part of their apparent immunity reflects a pre-existing trajectory rather than the shock itself. What the data establish is thus not acceleration but the absence of interruption: the capacity-driven, structural character of renewable output left its upward path untouched, whereas demand-driven fossil consumption fell and then rebounded. That distinction, between the durable composition of the energy system and transient fluctuations in demand, is the essential contrast the pandemic reveals.
+
+Taken together, the two episodes answer the question with which the section opened. The sustained price and supply shock of the 1970s did produce durable structural change, but unevenly, and only where the state converted the disruption into a deliberate low-carbon building programme, as in France and Sweden; where the response was left to prices alone, the shift faded once oil grew cheap again. The abrupt demand shock of 2020 produced no structural change at all: it dented consumption without altering the composition of supply, and the system rebounded to its prior fossil-fuelled pattern. On this evidence, historical shocks do not by themselves transform energy systems. They open a window that is realised only where institutions act upon it, which is why the slow, deliberate transition examined in the remainder of the report matters more than any single crisis.
 
 # The Geography of the Footprint {#sec-geo}
 
@@ -982,11 +1066,11 @@ Wealth and energy structure explain why national footprints differ; the spatial 
 
 ## The eastward shift of the emissions centre of gravity {#sec-east}
 
-A long-run view of emissions by continent establishes the single most consequential fact about modern emissions, namely that their geographical centre of gravity has moved.
+A long-run view of emissions by continent, presented as paired absolute and relative panels in @fig-continents, establishes the single most consequential fact about modern emissions, namely that their geographical centre of gravity has moved.
 
 ```{r geo-continents}
 #| label: fig-continents
-#| fig-cap: "Annual CO2 emissions by continent, 1900 to 2022, shown two ways. The left panel gives absolute emissions in gigatonnes; the right panel gives each continent's share of the global total. Europe and North America dominate the twentieth century, whereas Asia overtakes both after 2000 and continues to rise. The relative panel isolates the compositional shift from the growth in the total, so the eastward displacement is visible even as every continent's absolute emissions rise. Antarctica, a countrycode artefact with negligible emissions, is excluded. The legend is vertical and ordered to match the top-to-bottom stacking of the bands."
+#| fig-cap: "Annual CO2 emissions by continent, 1900 to 2022, shown two ways. The left panel gives absolute emissions in gigatonnes; the right panel gives each continent's share of the global total. Europe and North America dominate the twentieth century, whereas Asia overtakes both after 2000 and continues to rise. The relative panel isolates the compositional shift from the growth in the total, so the eastward displacement is visible even as every continent's absolute emissions rise. Antarctica, a countrycode artefact (continent) with negligible emissions, is excluded. The legend is vertical and ordered to match the top-to-bottom stacking of the bands."
 #| fig-width: 12
 #| fig-height: 5
 
@@ -1033,11 +1117,11 @@ p_cont_rel <- ggplot(cont_co2, aes(year, total_co2, fill = continent)) +
   theme(legend.position = "right")
 ```
 
-For most of the twentieth century, global emissions were principally an Atlantic phenomenon. After 2000, Asia overtakes both Europe and North America and continues to climb, reflecting the rapid industrialisation of populous economies, China foremost among them. The relative panel sharpens the point: Asia's share of the global total rises from a small fraction at mid-century to a clear majority by 2022, while Europe's share contracts steadily, so the compositional shift is unmistakable even though every continent's absolute emissions grew. This eastward displacement provides essential context for the decarbonisation achieved in several Western economies, since those gains occur within a shrinking share of a growing global total, so national progress and global stagnation are not contradictory but complementary facts.
+The two panels of @fig-continents record a single displacement from complementary angles. For most of the twentieth century, global emissions were principally an Atlantic phenomenon. After 2000, Asia overtakes both Europe and North America and continues to climb, reflecting the rapid industrialisation of populous economies, China foremost among them. The relative panel sharpens the point: Asia's share of the global total rises from a small fraction at mid-century to a clear majority by 2022, while Europe's share contracts steadily, so the compositional shift is unmistakable even though every continent's absolute emissions grew. This eastward displacement provides essential context for the decarbonisation achieved in several Western economies, since those gains occur within a shrinking share of a growing global total, so national progress and global stagnation are not contradictory but complementary facts.
 
 ## Which countries emit the most, and how the ranking changed {#sec-race}
 
-The continental view is made concrete by examining the leading national emitters at the beginning and end of the modern period, which exposes the turnover behind the aggregate shift.
+The continental view is made concrete in @fig-emitter-ranking, which ranks the leading national emitters at the beginning and end of the modern period and exposes the turnover behind the aggregate shift.
 
 ```{r emitter-ranking}
 #| label: fig-emitter-ranking
@@ -1075,11 +1159,11 @@ ggplot(snap, aes(co2, country_ord, fill = continent)) +
        x = lab_co2_mt, y = NULL, caption = owid_caption)
 ```
 
-The comparison renders the eastward shift unambiguous. In 1990 the United States is the largest emitter by a wide margin, with the Soviet successor states and several European economies prominent in the upper ranks. By 2022 China occupies first place at more than twice the emissions of the United States, India has risen to third, and several European economies have fallen out of the leading group altogether. The composition of the ranking, and not merely the magnitudes within it, has been transformed, which is the national-level counterpart to the continental trajectory of the preceding figure. Because the membership of the leading group differs between the two years, the turnover in country labels is itself the substantive message. Within each panel, ties in the twelfth position are broken arbitrarily, which does not affect the visible pattern.
+The comparison in @fig-emitter-ranking renders the eastward shift unambiguous. In 1990 the United States is the largest emitter by a wide margin, with the Soviet successor states and several European economies prominent in the upper ranks. By 2022 China occupies first place at more than twice the emissions of the United States, India has risen to third, and several European economies have fallen out of the leading group altogether. The composition of the ranking, and not merely the magnitudes within it, has been transformed, which is the national-level counterpart to the continental trajectory of @fig-continents. Because the membership of the leading group differs between the two years, the turnover in country labels is itself the substantive message. Within each panel, ties in the twelfth position are broken arbitrarily, which does not affect the visible pattern.
 
 ## The contemporary spread of renewable energy {#sec-map}
 
-A final spatial view addresses where the modern wind-and-solar transition is actually taking place, and when. Because the headline renewables share conflates new wind and solar generation with long-established hydroelectric capacity, the map below plots the combined wind and solar share alone, which isolates the contemporary build-out from the hydroelectric legacy.
+A final spatial view addresses where the modern wind-and-solar transition is actually taking place, and when. Because the headline renewables share conflates new wind and solar generation with long-established hydroelectric capacity, @fig-map plots the combined wind and solar share alone, which isolates the contemporary build-out from the hydroelectric legacy.
 
 ```{r geo-map}
 #| label: fig-map
@@ -1106,16 +1190,7 @@ ws_share <- energy |>
                            primary_energy_consumption) |>
   select(iso_code, year, ws_share_energy)
 
-# Bin the share into explicit classes. The wind+solar share is near zero for
-# almost every country until recently (median 0.01%, 90th percentile ~5%), so a
-# continuous viridis scale mapped 0% to a dark colour and rendered the early
-# panels as an indistinct dark mass in which true zero and missing data were
-# impossible to tell apart. Cutting the share into labelled bins and mapping them
-# with a *discrete* fill scale fixes both problems at once: zero reads as
-# near-white, the emergence of colour becomes the signal, and — crucially — a
-# discrete legend renders as a simple row of swatches that stays anchored at the
-# bottom in every ggplot2 version, unlike the continuous colour bar, whose guide
-# reflowed into the right margin on some renderers.
+# Bin the share into explicit classes.
 ws_breaks <- c(0, 1, 2, 5, 10, 15, 20, Inf)
 ws_labels <- c("0–1", "1–2", "2–5", "5–10", "10–15", "15–20", "≥20")
 
@@ -1154,11 +1229,14 @@ ggplot(map_data) +
         legend.text = element_text(size = 8))
 ```
 
-This map isolates the modern transition by excluding hydroelectric and other legacy renewables. In 1990 and 2000 the world is almost uniformly blank: wind and solar supplied a negligible share of primary energy nearly everywhere, with only Denmark beginning to stand out. By 2010 a faint band of colour appears across north-western Europe, and by 2022 a pronounced cluster has emerged across Western Europe, led by Denmark, Portugal, Ireland, and Spain, alongside rising shares in parts of Asia. The binned pale-to-dark scale is what makes this legible: because almost every country sits near zero for most of the period, a scale on which zero reads as near-white lets the later emergence of colour carry the story, and the separate grey for countries without data keeps a genuine zero distinct from a mere absence of reporting. The contrast with the headline renewables figure is the point: whereas total renewable share is high in long-standing hydroelectric economies such as Norway and Brazil from the very first panel, the wind-and-solar share is close to zero everywhere until the present century and then concentrates in a specific set of countries. Mapping wind and solar separately therefore removes the conflation acknowledged earlier and shows the contemporary build-out for what it is, a recent and geographically concentrated phenomenon rather than an even global trend.
+The sequence of panels in @fig-map isolates the modern transition by excluding hydroelectric and other legacy renewables. In 1990 and 2000 the world is almost uniformly blank: wind and solar supplied a negligible share of primary energy nearly everywhere, with only Denmark beginning to stand out. By 2010 a faint band of colour appears across north-western Europe, and by 2022 a pronounced cluster has emerged across Western Europe, led by Denmark, Portugal, Ireland, and Spain, alongside rising shares in parts of Asia. The binned pale-to-dark scale is what makes this legible: because almost every country sits near zero for most of the period, a scale on which zero reads as near-white lets the later emergence of colour carry the story, and the separate grey for countries without data keeps a genuine zero distinct from a mere absence of reporting. The contrast with the headline renewables figure is the point: whereas total renewable share is high in long-standing hydroelectric economies such as Norway and Brazil from the very first panel, the wind-and-solar share is close to zero everywhere until the present century and then concentrates in a specific set of countries. Mapping wind and solar separately therefore removes the conflation acknowledged earlier and shows the contemporary build-out for what it is, a recent and geographically concentrated phenomenon rather than an even global trend.
+
+Taken together, the three spatial views expose a tension that frames the remainder of the report. The centre of gravity of emissions has moved decisively eastward, so that Asia now accounts for the majority of the global total, yet the modern wind-and-solar build-out remains concentrated in a small cluster of Western European economies whose own share of that total is contracting. Where emissions are produced and where the contemporary transition is taking hold are, on this evidence, two different maps. That divergence, between the geography of the problem and the geography of the response, is what makes the pace of national progress the pressing question, and it is that pace, rather than the static distribution examined here, to which the analysis now turns.
+
 
 # Which Countries Are Advancing Fastest {#sec-scoreboard}
 
-The preceding map cautions that a single-year renewable share rewards inherited hydroelectric capacity and obscures the economies that are changing most rapidly. The most informative measure of leadership is therefore the change in renewable share over time rather than its level at any one moment.
+The preceding map cautions that a single-year renewable share rewards inherited hydroelectric capacity and obscures the economies that are changing most rapidly. The most informative measure of leadership is therefore the change in renewable share over time rather than its level at any one moment. Three views are used together: a ranking of the largest gains, a slope graph that anchors each country's start and end position, and a full trajectory that shows the *shape* of each country's climb rather than only its endpoint.
 
 ```{r q5-leaders}
 #| label: fig-q5
@@ -1193,18 +1271,180 @@ ggplot(change_tbl, aes(change_pp, reorder(country, change_pp))) +
        x = "Percentage-point increase", y = NULL, caption = owid_caption)
 ```
 
-Ranked by momentum, the leaders are concentrated in Western Europe, each having increased its renewable share substantially over the period even where its absolute share still trails an established hydroelectric economy such as Norway, which scarcely registers on this measure because it began the period near saturation with little room to grow. Returning to @sec-map, these economies are the engines of the newer wind and solar transition rather than inheritors of the older hydroelectric one. The appropriate criterion of leadership is therefore the rate of change, which identifies the economies driving the contemporary transition rather than those favoured by geographical endowment.
+```{r q5-region-count}
+#| label: q5-region-count
+#| include: false
+
+# Quantify the "concentrated in Western Europe" claim rather than asserting it.
+change_tbl_region <- change_tbl |>
+  mutate(continent = countrycode(iso_code, "iso3c", "continent"),
+         region     = countrycode(iso_code, "iso3c", "region23"))
+
+n_europe   <- sum(change_tbl_region$continent == "Europe", na.rm = TRUE)
+n_total    <- nrow(change_tbl_region)
+top3       <- change_tbl |> slice_head(n = 3) |> pull(country)
+```
+
+Of the fifteen fastest-moving economies, `r n_europe` of `r n_total` are in Europe, confirming that the momentum ranking is not evenly spread but concentrated in a specific policy environment; consistent with EU-level renewable targets and national feed-in-tariff schemes rather than a generalised global trend. The three fastest movers are `r paste(top3, collapse = ", ")`.
+
+A bar chart of endpoint change, however, cannot distinguish a country that climbed steadily across fifteen years from one that surged late and plateaued; a distinction the report has treated as analytically important since the shock-recovery curves in @sec-shocks. The slope graph below adds that missing dimension in static form.
+
+```{r q5-slope}
+#| label: fig-q5-slope
+#| fig-cap: "Renewable share of primary energy, 2008 versus 2023, for the fifteen fastest-moving economies. The slope of each line is the pace of change; countries are ordered and coloured by their 2023 rank, so the steepest lines identify the countries that not only gained the most but did so most consistently across the period."
+#| fig-height: 6.5
+
+slope_df <- change_tbl |>
+  select(country, starts_with("yr_"), change_pp) |>
+  arrange(desc(change_pp)) |>
+  mutate(rank = row_number()) |>
+  pivot_longer(starts_with("yr_"), names_to = "yr", values_to = "share") |>
+  mutate(year = if_else(yr == paste0("yr_", start_yr), start_yr, end_yr))
+
+ggplot(slope_df, aes(year, share, group = country)) +
+  geom_line(aes(colour = rank), linewidth = 1) +
+  geom_point(aes(colour = rank), size = 2) +
+  geom_text_repel(data = filter(slope_df, year == start_yr),
+                  aes(label = country), hjust = 1, nudge_x = -1.5,
+                  size = 2.9, direction = "y", segment.size = 0.2) +
+  geom_text_repel(data = filter(slope_df, year == end_yr),
+                  aes(label = country), hjust = 0, nudge_x = 1.5,
+                  size = 2.9, direction = "y", segment.size = 0.2) +
+  scale_colour_viridis_c(option = "viridis", guide = "none") +
+  scale_x_continuous(breaks = c(start_yr, end_yr),
+                     limits = c(start_yr - 6, end_yr + 6)) +
+  labs(title = "Steady climbers versus late sprinters",
+       subtitle = paste0("Renewable share of primary energy, ", start_yr,
+                          " and ", end_yr),
+       x = NULL, y = "Renewables share of primary energy (%)",
+       caption = owid_caption)
+```
+
+## The path, not just the endpoint {#sec-scoreboard-trajectory}
+
+The slope graph anchors only two years. Plotting the full `r start_yr`–`r end_yr` trajectory for the same fifteen countries makes the *shape* of each climb; steady, accelerating, or plateauing, directly visible rather than inferred from two endpoints.
+
+```{r q5-trajectory}
+#| label: fig-q5-trajectory
+#| fig-cap: !expr paste0("Renewable share of primary energy, ", start_yr, " to ", end_yr, ", for the fifteen fastest-moving economies. Each line is one country's full annual path; countries are coloured by their total gain and labelled at the final year. The curvature distinguishes steady climbers from economies that surged late in the window.")
+#| fig-height: 6
+
+leader_countries <- change_tbl$country
+
+traj_df <- energy |>
+  filter(country %in% leader_countries, year >= start_yr, year <= end_yr,
+         !is.na(renewables_share_energy)) |>
+  select(country, year, share = renewables_share_energy) |>
+  left_join(change_tbl |> select(country, change_pp), by = "country") |>
+  mutate(country = fct_reorder(country, change_pp))
+
+end_labels <- traj_df |> group_by(country) |> filter(year == max(year)) |> ungroup()
+
+ggplot(traj_df, aes(year, share, colour = change_pp, group = country)) +
+  geom_line(linewidth = 1) +
+  geom_point(data = end_labels, size = 2) +
+  geom_text_repel(data = end_labels, aes(label = country), hjust = 0,
+                  nudge_x = 0.4, direction = "y", size = 2.9,
+                  segment.size = 0.2, seed = 7) +
+  scale_colour_viridis_c(option = "viridis", guide = "none") +
+  scale_x_continuous(breaks = seq(start_yr, end_yr, 3),
+                     limits = c(start_yr, end_yr + 6)) +
+  labs(title = "Steady climbers versus late sprinters",
+       subtitle = paste0("Renewable share of primary energy, ", start_yr,
+                          " to ", end_yr, " (fifteen fastest-moving economies)"),
+       x = NULL, y = "Renewables share of primary energy (%)",
+       caption = owid_caption)
+```
+
+Read together with the map in @sec-map, these three figures reinforce the same conclusion from three angles: the leaders are concentrated in Western Europe, their gains are recent rather than gradual across the whole period, and the trajectory view exposes an acceleration late in the window that a simple two-point comparison would understate. The appropriate criterion of leadership is therefore the rate of change, and specifically its recent trajectory, which identifies the economies driving the contemporary transition rather than those favoured by geographical endowment.
 
 # Discussion and Conclusion {#sec-conclusion}
 
-Read as a whole, the analysis converges on a coherent account of the transition. At the global scale, renewable capacity has so far been additive rather than substitutive, demand continues to rise, and external shocks dent but do not redirect the emissions curve, indicating that emissions are governed by the structural composition of energy systems rather than by transient events. At the national scale, however, prosperity and emissions can be separated, and the decisive factor is the manner in which energy is produced rather than the quantity of wealth a country commands. The comparative study of the oil crises and the COVID-19 pandemic suggests that the openings created by shocks tend to be realised most fully where policy acts upon them, and that renewable generation, once installed, is structurally insulated from demand shocks. The spatial analysis demonstrates that the emissions centre of gravity has shifted eastward even as several Western economies separated wealth from carbon, and that the spread of renewables comprises two distinct phases, an older hydroelectric one and a newer wind and solar one. When leadership is measured by momentum rather than inherited position, the economies advancing fastest are those expanding wind and solar capacity, not those endowed with legacy hydroelectric resources. The overall conclusion is that the transition is accelerating and that wealth and carbon can in principle be separated, yet absolute global fossil-fuel use remains persistently high.
+Returning to the question posed at the outset; how, where, and why the world decarbonises unevenly, the analysis converges on a single answer: unevenness is driven by policy-mediated differences in energy-system composition, not by differences in wealth, and it is increasingly geographically concentrated even as global fossil demand keeps rising in absolute terms.
 
-Several limitations qualify these findings. OWID compiles self-reported national statistics of varying quality and timeliness, so the most recent years are frequently incomplete; the GDP series in particular derives from the Maddison Project Database, whose latest observations are sparse, which is why the cross-sectional reference year is selected for joint coverage rather than fixed at the final year of the emissions series. Sparse coverage before 1990 likewise means that comparisons involving the earlier period rest on a thinner sample, and strong cross-country claims are accordingly restricted to the well-covered era. Per-capita ratios are unstable for very small populations, which are excluded from the relevant figures. The analysis relies throughout on territorial emissions, whereas a fuller account would foreground consumption-based emissions to capture the carbon embodied in trade, which flatters net-importing economies. Finally, the indicator of renewable share aggregates established hydroelectric capacity with newer wind and solar generation, a conflation addressed only partially through the momentum ranking of the final section.
+## Summary of findings {#sec-conclusion-summary}
+
+```{r conclusion-summary-table}
+#| label: tbl-conclusion-summary
+#| tbl-cap: "Headline figures underlying the report's conclusions, drawn from the sections indicated."
+
+summary_headline <- tibble(
+  Finding = c(
+    "Global energy demand growth, 1990–2024",
+    "Correlation, GDP per capita vs renewable share",
+    "Asia's share of global CO2, 2022",
+    "Fastest-moving economies concentrated in Europe",
+    "France's carbon-intensity change, 1973–2000"
+  ),
+  Value = c(
+    "Rising throughout; fossil bands did not contract (§4.1)",
+    sprintf("r = %.2f (near zero) (§2.3)", r_gdp_ren),
+    "Majority of global total, up from a small share at mid-century (§6.1)",
+    sprintf("%d of %d fastest-moving economies (§7)", n_europe, n_total),
+    sprintf("%s%% (§5.1)",
+            if (exists("fr_drop") && length(fr_drop)) sprintf("%+.0f", fr_drop) else "~-40")
+  )
+)
+
+knitr::kable(summary_headline, col.names = c("Finding", "Headline figure"))
+```
+
+At the global scale, renewable capacity has so far been additive rather than substitutive, demand continues to rise, and external shocks dent but do not redirect the emissions curve, indicating that emissions are governed by the structural composition of energy systems rather than by transient events. At the national scale, however, prosperity and emissions can be separated, and the decisive factor is the manner in which energy is produced rather than the quantity of wealth a country commands. The comparative study of the oil crises and the COVID-19 pandemic suggests that the openings created by shocks tend to be realised most fully where policy acts upon them, and that renewable generation, once installed, is structurally insulated from demand shocks. The spatial analysis demonstrates that the emissions centre of gravity has shifted eastward even as several Western economies separated wealth from carbon, and that the spread of renewables comprises two distinct phases, an older hydroelectric one and a newer wind-and-solar one. When leadership is measured by momentum rather than inherited position, as in @sec-scoreboard, the economies advancing fastest are concentrated in a specific policy environment rather than distributed evenly across income levels or geography. The overall conclusion is that the transition is accelerating and that wealth and carbon can in principle be separated, yet absolute global fossil-fuel use remains persistently high.
+
+## Limitations {#sec-conclusion-limitations}
+
+Several limitations qualify these findings. OWID compiles self-reported national statistics of varying quality and timeliness, so the most recent years are frequently incomplete; the GDP series in particular derives from the Maddison Project Database, whose latest observations are sparse, which is why the cross-sectional reference year is selected for joint coverage rather than fixed at the final year of the emissions series. Sparse coverage before 1990 likewise means that comparisons involving the earlier period rest on a thinner sample, and strong cross-country claims are accordingly restricted to the well-covered era. Per-capita ratios are unstable for very small populations, which are excluded from the relevant figures. The analysis relies throughout on territorial emissions, whereas a fuller account would foreground consumption-based emissions to capture the carbon embodied in trade, which flatters net-importing economies. Finally, the indicator of renewable share aggregates established hydroelectric capacity with newer wind and solar generation, a conflation addressed only partially through the momentum ranking of @sec-scoreboard.
+
+## Future work {#sec-conclusion-future}
 
 Were the analysis to be repeated, three refinements would be prioritised. Decoupling would be expressed as a formal quantity, namely the elasticity of CO2 with respect to GDP, rather than conveyed through visual impression; consumption-based emissions would be incorporated to account for carbon embodied in imports; and a single analysis year would be standardised across all figures to facilitate cross-chart comparison, an aim already partly served here by the automatically selected reference year. Methodologically, the project reinforced two lessons. The greater part of the effort was devoted to data preparation rather than to plotting, and the most consequential single safeguard was the consistent removal of OWID's aggregate rows, since a careless join silently double-counts. The exploratory analysis, moreover, proved not to be a preliminary exercise but the source of the report's central question, with the near-zero correlation between wealth and renewable share directing the subsequent investigation.
 
-```{r session}
-#| label: session-info
-#| code-fold: show
-sessionInfo()
+# References {#sec-references}
+
+## Data sources {#sec-ref-data}
+
+Both datasets were accessed on `r data_accessed` and are redistributed by Our World in Data under a Creative Commons BY licence.
+
+- **Our World in Data — Energy dataset.** Energy consumption by source, per-capita energy use, and renewable and low-carbon shares. <https://github.com/owid/energy-data> (file: `owid-energy-data.csv`).
+- **Our World in Data — CO2 and Greenhouse Gas Emissions dataset.** Territorial CO2 emissions, carbon intensity, and GDP. <https://github.com/owid/co2-data> (file: `owid-co2-data.csv`).
+
+These two files compile several upstream sources, of which three matter directly for the claims made above:
+
+- **Energy Institute.** *Statistical Review of World Energy.* The fuel-mix series behind the renewable and low-carbon shares; its limited country coverage is the reason those indicators are reported for roughly eighty countries only (@fig-coverage). <https://www.energyinst.org/statistical-review>
+- **Bolt, J. and van Zanden, J. L.** *Maddison Project Database.* The GDP series; its lag behind the emissions record is why the reference year is selected for joint coverage rather than fixed at the final year (@sec-eda). <https://www.rug.nl/ggdc/historicaldevelopment/maddison/>
+- **Global Carbon Project.** *Global Carbon Budget.* The underlying territorial CO2 estimates. <https://www.globalcarbonproject.org/carbonbudget/>
+
+Country boundaries for @fig-map are drawn from **Natural Earth** (public domain), accessed through the `rnaturalearth` package. <https://www.naturalearthdata.com>
+
+## Software {#sec-ref-software}
+
+The analysis was written in R `r paste(R.version$major, R.version$minor, sep = ".")` (R Core Team, R Foundation for Statistical Computing, Vienna; <https://www.R-project.org>) and rendered with Quarto (<https://quarto.org>). The packages used are listed in @tbl-packages, with the versions actually loaded for this render.
+
+```{r ref-packages}
+#| label: tbl-packages
+#| tbl-cap: "R packages used, with the version loaded for this render. Citation details for any package are reproducible with citation(\"package\") in R."
+
+tibble::tibble(
+  Package = c("tidyverse", "ggplot2", "dplyr", "tidyr", "readr", "forcats",
+              "scales", "ggrepel", "patchwork", "countrycode", "sf",
+              "rnaturalearth", "knitr"),
+  Purpose = c("Core data-manipulation and plotting collection",
+              "All figures",
+              "Data manipulation and joins",
+              "Reshaping between wide and long form",
+              "Reading the cached CSV files",
+              "Ordering factors in ranked figures",
+              "Axis formatting and label helpers",
+              "Non-overlapping text labels",
+              "Composing the two-panel continent figure",
+              "Mapping ISO codes to continents and regions",
+              "Handling the map geometries",
+              "Supplying the Natural Earth country boundaries",
+              "Rendering tables and executing the document")
+) |>
+  dplyr::mutate(Version = vapply(Package,
+                                 function(p) as.character(utils::packageVersion(p)),
+                                 character(1))) |>
+  dplyr::relocate(Version, .after = Package) |>
+  knitr::kable(align = c("l", "r", "l"))
 ```

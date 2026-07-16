@@ -1,9 +1,3 @@
-<<<<<<< HEAD
-.Rproj.user
-.Rhistory
-.RData
-.Ruserdata
-=======
 # Data cache (re-downloaded automatically on first render)
 data/
 
@@ -25,4 +19,3 @@ Project_Report.pdf
 
 # OS
 .DS_Store
->>>>>>> 6f04723331bb9690162ffdfd64224aaea5ad8fb1
