@@ -1,4 +1,28 @@
+<<<<<<< HEAD
 .Rproj.user
 .Rhistory
 .RData
 .Ruserdata
+=======
+# Data cache (re-downloaded automatically on first render)
+data/
+
+# Quarto/knitr render artifacts (regenerated on every render)
+Project_Report_cache/
+Project_Report_files/
+*_cache/
+*_files/
+.quarto/
+
+# Rendered outputs (regenerable from the .qmd; force-add for submission if needed)
+Project_Report.html
+Project_Report.pdf
+
+# R / RStudio
+.Rproj.user/
+.Rhistory
+.RData
+
+# OS
+.DS_Store
+>>>>>>> 6f04723331bb9690162ffdfd64224aaea5ad8fb1
