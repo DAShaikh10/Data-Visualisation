@@ -895,7 +895,7 @@ Having shown that the energy mix governs emissions, the analysis now asks whethe
 
 ## Five economies and the oil crises of the 1970s {#sec-oil}
 
-The oil shocks of 1973 and 1979 confronted every industrialised importer with the same abrupt increase in the price and insecurity of oil. Whether this common shock produced a common response is examined through five economies selected to span the plausible range of reactions: France, which pursued an exceptionally rapid nuclear programme; Sweden, which combined nuclear expansion with abundant hydroelectric capacity; Japan, an import-dependent economy that turned partly to nuclear power; and the United Kingdom and the United States, two market-oriented economies in which oil and coal remained dominant. Presenting the five as small multiples converts what would otherwise be an anecdote about France into a structured comparison.
+The oil shocks of 1973 and 1979 confronted every industrialised importer with the same abrupt increase in the price and insecurity of oil. Whether this common shock produced a common response is examined through five economies selected to span the plausible range of reactions: France, which pursued an exceptionally rapid nuclear programme; Sweden, which combined nuclear expansion with abundant hydroelectric capacity; Japan, an import-dependent economy that turned partly to nuclear power; and the United Kingdom and the United States, two market-oriented economies in which oil and coal remained dominant. Presenting the five as small multiples, as in @fig-oil-mix, converts what would otherwise be an account of France alone into a structured comparison.
 
 ```{r oil-mix}
 #| label: fig-oil-mix
@@ -937,9 +937,9 @@ ggplot(mix_long, aes(year, twh, fill = source)) +
   theme(legend.position = "right")
 ```
 
-The figure reveals a divergence rather than a convergence of responses. Within fifteen years of the first shock, France and Sweden develop substantial low-carbon shares, a development that coincides with the French nuclear construction programme initiated under the Messmer Plan and, in Sweden, with the build-out of combined nuclear and hydroelectric capacity. Japan turns partly toward nuclear generation, consistent with its acute import dependence and limited domestic fossil resources. The United Kingdom and the United States, by contrast, remain predominantly fossil-bound throughout. The shock was common to all five; the response was not.
+The small-multiple panels of @fig-oil-mix reveal a divergence rather than a convergence of responses. Within fifteen years of the first shock, France and Sweden develop substantial low-carbon shares, a development that coincides with the French nuclear construction programme initiated under the Messmer Plan and, in Sweden, with the build-out of combined nuclear and hydroelectric capacity. Japan turns partly toward nuclear generation, consistent with its acute import dependence and limited domestic fossil resources. The United Kingdom and the United States, by contrast, remain predominantly fossil-bound throughout. The shock was common to all five; the response was not.
 
-A change in the composition of energy supply is climatically meaningful only insofar as it lowers the carbon intensity of energy, that is, the emissions released per unit of energy consumed. The five economies are therefore ranked by the change in `co2_per_unit_energy` between 1973 and 2000, which reduces the comparison to a single interpretable figure per country.
+A change in the composition of energy supply is climatically meaningful only insofar as it lowers the carbon intensity of energy, that is, the emissions released per unit of energy consumed. The five economies are therefore ranked in @fig-oil-intensity by the change in `co2_per_unit_energy` between 1973 and 2000, which reduces the comparison to a single interpretable number per country.
 
 ```{r oil-intensity}
 #| label: fig-oil-intensity
@@ -983,15 +983,17 @@ ggplot(intensity_chg, aes(pct_change, country, fill = pct_change < 0)) +
 fr_drop <- intensity_chg |> filter(country == "France") |> pull(pct_change)
 ```
 
-The pattern in the data is consistent with a policy-mediated rather than a uniform Western turn away from fossil fuels. The two economies in which the state is documented to have directed a large low-carbon build-out, France through its nuclear programme and Sweden through combined nuclear and hydroelectric expansion, are also the two in which both the energy mix and its carbon intensity shifted most, with France's carbon intensity falling by about `r if (length(fr_drop)) sprintf("%.0f", abs(fr_drop)) else "40"` percent. The market-oriented economies, in which the response was left largely to prices, changed comparatively little once inexpensive oil returned in the mid-1980s. It should be stressed that this is an alignment between the observed trajectories and the historical record of policy, not a demonstration of causation: the dataset records what each energy system did, not why, and it cannot by itself rule out other contributing factors such as resource endowments, the timing of grid investment, or differing industrial structures. With that caveat, the close correspondence between the largest reductions and the most interventionist responses is striking, and it points to a recurring theme of the report, namely that the openings created by external shocks appear to be realised most fully where institutions act upon them.
+The pattern in @fig-oil-intensity is consistent with a policy-mediated rather than a uniform Western turn away from fossil fuels. The two economies in which the state is documented to have directed a large low-carbon build-out, France through its nuclear programme and Sweden through combined nuclear and hydroelectric expansion, are also the two in which both the energy mix and its carbon intensity shifted most, with France's carbon intensity falling by about `r if (length(fr_drop)) sprintf("%.0f", abs(fr_drop)) else "40"` percent. The market-oriented economies, in which the response was left largely to prices, changed comparatively little once inexpensive oil returned in the mid-1980s.
+
+It should be stressed that this is an alignment between the observed trajectories and the historical record of policy, not a demonstration of causation: the dataset records what each energy system did, not why, and it cannot by itself rule out other contributing factors such as resource endowments, the timing of grid investment, or differing industrial structures. With that caveat, the close correspondence between the largest reductions and the most interventionist responses remains striking.
 
 ## The COVID-19 demand shock and the rebound {#sec-covid}
 
-The COVID-19 pandemic of 2020 furnishes a contrasting natural experiment: an abrupt contraction in energy demand rather than a sustained increase in price. The pertinent question is whether the lockdowns suppressed fossil fuels more than renewables, and whether the 2021 recovery represented a return to the prior fossil-fuelled pattern of activity. A diverging bar chart of year-over-year change by source allows the contraction and the rebound to be read together.
+The COVID-19 pandemic of 2020 furnishes a contrasting natural experiment: an abrupt contraction in energy demand rather than a sustained increase in price. The pertinent question is whether the lockdowns suppressed fossil fuels more than renewables, and whether the 2021 recovery represented a return to the prior fossil-fuelled pattern of activity. @fig-covid, a diverging bar chart of year-over-year change by source, allows the contraction and the rebound to be read together.
 
 ```{r covid-bars}
 #| label: fig-covid
-#| fig-cap: "Year-over-year percentage change in global consumption by source. Fossil fuels exhibit a pronounced 2020 contraction followed by a strong 2021 rebound, whereas wind and solar grew in both years without interruption. Note that each 2021 percentage change is measured against the depressed 2020 base, so a large positive bar does not necessarily mean the source has returned to its 2019 volume; oil, in particular, had not."
+#| fig-cap: "Year-over-year percentage change in global consumption by source. Oil contracts sharply in 2020, coal more modestly, and gas barely at all, before all three rebound in 2021; nuclear also falls, whereas wind and solar grow in both years without interruption. Note that each 2021 percentage change is measured against the depressed 2020 base, so a large positive bar does not necessarily mean the source has returned to its 2019 volume; oil, in particular, had not."
 #| fig-height: 4.8
 
 covid <- energy_raw |>
@@ -1013,6 +1015,17 @@ covid <- energy_raw |>
 
 oil_drop <- covid |>
   filter(source == "Oil", year == 2020) |> pull(pct)
+
+# Per-source 2020 changes quoted in the prose, so the text tracks the data
+# rather than a fixed number: oil is a sharp V, gas barely moves, and nuclear
+# (a low-carbon source) contracts more than coal.
+covid_2020 <- function(s) covid |> filter(source == s, year == 2020) |> pull(pct)
+coal_drop  <- covid_2020("Coal")
+gas_drop   <- covid_2020("Gas")
+nuc_drop   <- covid_2020("Nuclear")
+hydro_chg  <- covid_2020("Hydro")
+solar_2020 <- covid_2020("Solar")
+wind_2020  <- covid_2020("Wind")
 
 # Absolute levels (TWh) to distinguish a percentage rebound from a full
 # recovery of the volume lost: a positive 2021 percentage change is measured
@@ -1038,7 +1051,13 @@ ggplot(covid, aes(pct, source, fill = period)) +
        x = "% change", y = NULL, caption = owid_caption)
 ```
 
-The asymmetry between sources is the central result. Oil, coal, and gas display a classic V-shaped profile, with a sharp contraction in 2020, deepest for oil at roughly `r sprintf("%.0f", abs(oil_drop))` percent, followed by a strong recovery in 2021, confirming that the rebound was a return to fossil-fuelled economic activity. One arithmetic point deserves emphasis, because a percentage rebound is measured against the depressed 2020 base and so can overstate the recovery: although oil's 2021 percentage gain is large, it did not fully restore the volume lost, and oil consumption in 2021 remained about `r sprintf("%s", format(round(oil_gap_2021), big.mark = ","))` TWh `r if (oil_recovered) "above" else "below"` its 2019 level, whereas coal and gas slightly exceeded theirs. Wind and solar, by contrast, scarcely register the lockdown and grow in both years. The explanation is structural rather than behavioural, since renewable output is governed by installed capacity rather than by current demand, so generating assets commissioned during 2020 continued to produce regardless of reductions in travel and industrial activity. Renewables are thus structurally insulated from demand shocks in a way that fossil fuels are not, a property that reinforces the broader finding that the transition is determined by the durable composition of the energy system rather than by transient fluctuations in demand.
+The asymmetry between sources in @fig-covid is the central result, though it is far sharper for some fossil fuels than for others. Oil alone traces a classic V: a steep contraction of roughly `r sprintf("%.0f", abs(oil_drop))` percent in 2020, the deepest of any source, followed by a strong rebound in 2021. Coal falls more modestly, by about `r sprintf("%.0f", abs(coal_drop))` percent, while gas barely moves at all, contracting only about `r sprintf("%.1f", abs(gas_drop))` percent; because the lockdowns fell hardest on transport, oil absorbed the greater part of the shock. A percentage rebound, moreover, is measured against the depressed 2020 base and so can overstate the recovery. Oil's large 2021 gain did not restore the volume lost: consumption in 2021 remained about `r sprintf("%s", format(round(oil_gap_2021), big.mark = ","))` TWh `r if (oil_recovered) "above" else "below"` its 2019 level, whereas coal and gas slightly exceeded theirs.
+
+The low-carbon sources did not respond as a single bloc either. Wind and solar scarcely register the lockdown, growing in both years, by roughly `r sprintf("%.0f", solar_2020)` and `r sprintf("%.0f", wind_2020)` percent respectively in 2020 alone, and hydro edged up about `r sprintf("%.1f", hydro_chg)` percent. Nuclear, however, contracted roughly `r sprintf("%.0f", abs(nuc_drop))` percent, a larger fall than coal. The insulation from the demand shock is therefore specific to wind and solar, whose output is fixed by installed capacity and near-zero marginal cost, so that generating assets commissioned during 2020 continued to produce regardless of reductions in travel and industrial activity. It does not extend to low-carbon energy in general: nuclear, a dispatchable source, tracked the fall in demand much as the fossil fuels did.
+
+One caveat qualifies the contrast. Wind and solar were already on a steep growth path before the pandemic, expanding at much the same rate in 2020 and 2021 as in the years around them, so part of their apparent immunity reflects a pre-existing trajectory rather than the shock itself. What the data establish is thus not acceleration but the absence of interruption: the capacity-driven, structural character of renewable output left its upward path untouched, whereas demand-driven fossil consumption fell and then rebounded. That distinction, between the durable composition of the energy system and transient fluctuations in demand, is the essential contrast the pandemic reveals.
+
+Taken together, the two episodes answer the question with which the section opened. The sustained price and supply shock of the 1970s did produce durable structural change, but unevenly, and only where the state converted the disruption into a deliberate low-carbon building programme, as in France and Sweden; where the response was left to prices alone, the shift faded once oil grew cheap again. The abrupt demand shock of 2020 produced no structural change at all: it dented consumption without altering the composition of supply, and the system rebounded to its prior fossil-fuelled pattern. On this evidence, historical shocks do not by themselves transform energy systems. They open a window that is realised only where institutions act upon it, which is why the slow, deliberate transition examined in the remainder of the report matters more than any single crisis.
 
 # The Geography of the Footprint {#sec-geo}
 
