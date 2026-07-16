@@ -857,9 +857,7 @@ decoupling <- co2 |>
   filter(year == eda_year, !is.na(gdp), !is.na(co2_per_capita),
          !is.na(population), population > 1e6) |>
   mutate(gdp_per_capita = gdp / population) |>
-  # Colour encodes a third variable, the low-carbon share of energy, so the plot
-  # explains *why* countries at a given income differ vertically instead of
-  # re-encoding CO2 per capita (already the y-axis) redundantly on colour.
+
   left_join(
     energy |> filter(year == eda_year) |>
       select(iso_code, low_carbon_share_energy),
