@@ -285,8 +285,6 @@ cov_long <- bind_rows(
                             levels = c("CO2 per capita", "GDP",
                                        "Energy per capita", "Renewables share")))
 
-# Colour-blind-checked four-line palette; hues drawn from the report's existing
-# scheme so the same indicator families keep familiar colours.
 cov_pal <- c(`CO2 per capita`    = "#B2182B",
              GDP                 = "#c46210",
              `Energy per capita` = "#2166ac",
@@ -939,10 +937,6 @@ ggplot(mix_long, aes(year, twh, fill = source)) +
   labs(title = "Five responses to a shared shock",
        subtitle = "Share of primary energy consumption by source",
        x = NULL, y = NULL, caption = owid_caption) +
-  # A single vertical legend, occupying the empty sixth facet cell, reads
-  # top-to-bottom (Coal down to Renewables) in the same order as the stacked
-  # bands, rather than the multi-column bottom legend whose column-major fill
-  # scrambled that order.
   theme(legend.position = "right")
 ```
 
@@ -961,12 +955,11 @@ intensity_chg <- co2 |>
   select(country, year, co2_per_unit_energy) |>
   pivot_wider(names_from = year, values_from = co2_per_unit_energy,
               names_prefix = "y") |>
-  # Guard against a missing 1973 or 2000 endpoint silently dropping a country.
+
   filter(!is.na(y1973), !is.na(y2000)) |>
   mutate(pct_change = 100 * (y2000 - y1973) / y1973,
          country    = fct_reorder(country, pct_change))
 
-# Surface any country lost to missing endpoints rather than failing silently.
 missing_intensity <- setdiff(oil_countries, intensity_chg$country)
 if (length(missing_intensity) > 0) {
   warning("No 1973/2000 carbon-intensity endpoint for: ",
@@ -1025,9 +1018,6 @@ covid <- energy_raw |>
 oil_drop <- covid |>
   filter(source == "Oil", year == 2020) |> pull(pct)
 
-# Per-source 2020 changes quoted in the prose, so the text tracks the data
-# rather than a fixed number: oil is a sharp V, gas barely moves, and nuclear
-# (a low-carbon source) contracts more than coal.
 covid_2020 <- function(s) covid |> filter(source == s, year == 2020) |> pull(pct)
 coal_drop  <- covid_2020("Coal")
 gas_drop   <- covid_2020("Gas")
@@ -1037,8 +1027,7 @@ solar_2020 <- covid_2020("Solar")
 wind_2020  <- covid_2020("Wind")
 
 # Absolute levels (TWh) to distinguish a percentage rebound from a full
-# recovery of the volume lost: a positive 2021 percentage change is measured
-# against the depressed 2020 base and need not return the series to 2019.
+# recovery of the volume lost.
 covid_levels <- energy_raw |>
   filter(country == "World", year %in% c(2019, 2020, 2021)) |>
   transmute(year,
@@ -1046,7 +1035,7 @@ covid_levels <- energy_raw |>
             fossil = coal_consumption + oil_consumption + gas_consumption)
 oil_2019 <- covid_levels$oil[covid_levels$year == 2019]
 oil_2021 <- covid_levels$oil[covid_levels$year == 2021]
-oil_gap_2021 <- oil_2019 - oil_2021     # TWh by which 2021 oil still trails 2019
+oil_gap_2021 <- oil_2019 - oil_2021
 oil_recovered <- oil_2021 >= oil_2019
 
 ggplot(covid, aes(pct, source, fill = period)) +
