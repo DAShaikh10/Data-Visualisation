@@ -18,4 +18,4 @@ Project_Report.pdf
 .RData
 
 # OS
-.DS_Store
+.DS_Store*.Rproj
