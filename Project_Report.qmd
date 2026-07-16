@@ -841,6 +841,8 @@ Both the 2008 financial crisis and the 2020 lockdowns produce sharp and clearly 
 
 To answer the question directly: global shocks interrupt the emissions curve but do not redirect it. The structural composition of energy systems — what kinds of power plants exist and what fuels they burn — governs emissions far more durably than any demand-side disruption, however severe. Crisis alone is not a climate policy.
 
+Taken together, the two findings of this section converge on a single conclusion. Renewable capacity is growing, but at the global scale it is meeting new demand rather than displacing the fossil base that already exists. And when demand does fall — whether through financial crisis or pandemic — the underlying fossil infrastructure ensures that emissions recover as soon as economic activity resumes. Both findings point to the same diagnosis: what governs global emissions is not the pace of renewable addition, nor the frequency of economic shocks, but the structural composition of the energy system as a whole. Until the fossil bands in @fig-q1 begin to contract in absolute terms, and until the emissions curve in @fig-q2 responds to a shock by settling at a permanently lower level rather than rebounding, the transition at the global scale remains incomplete. The national cases examined in the sections that follow show that such structural change is possible — but the global aggregate makes clear that it has not yet arrived.
+
 # Wealth and the Carbon Footprint {#sec-wealth}
 
 The exploratory analysis established that national wealth and renewable share are essentially uncorrelated. This relationship is now examined directly, because it determines whether decarbonisation and continued prosperity are mutually compatible.
