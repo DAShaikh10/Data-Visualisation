@@ -5,11 +5,10 @@ subtitle: |
   **Group 7**
 author:
   - Melisa Cihan
-  - Amaan Aslam Shaikh
+  - Amaan Shaikh
+  - Danish Ali Shaikh
   - Hrusheekesh Sawarkar
   - Kseniia Holovchenko
-  - Danish Ali Abdul Kareem Shaikh
-date: today
 format:
   html:
     toc: true
@@ -23,6 +22,23 @@ format:
     theme: cosmo
     embed-resources: true
     fig-cap-location: bottom
+    include-in-header:
+      text: |
+        <style>
+        /* Quarto lays the title meta out as a two-column grid, so a lone author
+           block is squeezed into half the page and names break mid-word. Give it
+           the full width and flow the authors inline, breaking only between names. */
+        .quarto-title-meta { display: block; }
+        .quarto-title-meta-contents { white-space: nowrap; }
+        .quarto-title-meta-contents p {
+          display: inline;
+          margin-bottom: 0;
+        }
+        .quarto-title-meta-contents p:not(:last-child)::after {
+          content: " · ";
+          color: #adb5bd;
+        }
+        </style>
   pdf:
     toc: true
     toc-depth: 2
@@ -301,7 +317,7 @@ summary_df <- co2 |>
             `GDP per capita (int-USD)` = gdp / population,
             `CO2 per capita (t)`       = co2_per_capita,
             `CO2 per GDP (kg/USD)`     = co2_per_gdp,
-            `Carbon intensity (kg/kWh)`= co2_per_unit_energy) |>
+            `Carbon intensity (g/kWh)` = co2_per_unit_energy) |>
   left_join(
     energy |> filter(year == eda_year) |>
       select(iso_code,
@@ -312,6 +328,9 @@ summary_df <- co2 |>
   ) |>
   select(-iso_code)
 
+# A single signif() across indicators spanning 0.2 to 132,000 forces scientific
+# notation. Instead each row is formatted at a precision set by its own median,
+# so every statistic reads as a plain number.
 summary_tbl <- summary_df |>
   pivot_longer(everything(), names_to = "Indicator", values_to = "value") |>
   filter(!is.na(value)) |>
@@ -324,10 +343,18 @@ summary_tbl <- summary_df |>
             Min     = min(value),
             Max     = max(value),
             .groups = "drop") |>
+  # Order rows as the report introduces them rather than alphabetically.
+  mutate(Indicator = factor(Indicator, levels = names(summary_df))) |>
+  arrange(Indicator) |>
+  mutate(digits = case_when(Median >= 100 ~ 0, Median >= 10 ~ 1,
+                            Median >= 1 ~ 2, TRUE ~ 3)) |>
+  rowwise() |>
   mutate(across(c(Mean, Median, SD, IQR, Min, Max),
-                ~ signif(.x, 3)))
+                ~ formatC(.x, format = "f", digits = digits, big.mark = ","))) |>
+  ungroup() |>
+  select(-digits)
 
-knitr::kable(summary_tbl, format.args = list(big.mark = ","))
+knitr::kable(summary_tbl, align = c("l", rep("r", 7)))
 ```
 
 A few features stand out even before the dedicated figures. Per-capita GDP, per-capita CO2, and energy use each span more than two orders of magnitude across countries, so their means sit well above their medians; the renewable and low-carbon shares, being bounded between zero and one hundred, are less extreme but still markedly uneven; and carbon intensity is comparatively compact, reflecting the shared physics of combustion. These shapes are the reason the report relies on medians, logarithmic axes, and distribution plots rather than on means alone.
@@ -1359,10 +1386,52 @@ Several limitations qualify these findings. OWID compiles self-reported national
 
 Were the analysis to be repeated, three refinements would be prioritised. Decoupling would be expressed as a formal quantity, namely the elasticity of CO2 with respect to GDP, rather than conveyed through visual impression; consumption-based emissions would be incorporated to account for carbon embodied in imports; and a single analysis year would be standardised across all figures to facilitate cross-chart comparison, an aim already partly served here by the automatically selected reference year. Methodologically, the project reinforced two lessons. The greater part of the effort was devoted to data preparation rather than to plotting, and the most consequential single safeguard was the consistent removal of OWID's aggregate rows, since a careless join silently double-counts. The exploratory analysis, moreover, proved not to be a preliminary exercise but the source of the report's central question, with the near-zero correlation between wealth and renewable share directing the subsequent investigation.
 
+# References {#sec-references}
 
+## Data sources {#sec-ref-data}
 
-```{r session}
-#| label: session-info
-#| code-fold: show
-sessionInfo()
+Both datasets were accessed on `r data_accessed` and are redistributed by Our World in Data under a Creative Commons BY licence.
+
+- **Our World in Data — Energy dataset.** Energy consumption by source, per-capita energy use, and renewable and low-carbon shares. <https://github.com/owid/energy-data> (file: `owid-energy-data.csv`).
+- **Our World in Data — CO2 and Greenhouse Gas Emissions dataset.** Territorial CO2 emissions, carbon intensity, and GDP. <https://github.com/owid/co2-data> (file: `owid-co2-data.csv`).
+
+These two files compile several upstream sources, of which three matter directly for the claims made above:
+
+- **Energy Institute.** *Statistical Review of World Energy.* The fuel-mix series behind the renewable and low-carbon shares; its limited country coverage is the reason those indicators are reported for roughly eighty countries only (@fig-coverage). <https://www.energyinst.org/statistical-review>
+- **Bolt, J. and van Zanden, J. L.** *Maddison Project Database.* The GDP series; its lag behind the emissions record is why the reference year is selected for joint coverage rather than fixed at the final year (@sec-eda). <https://www.rug.nl/ggdc/historicaldevelopment/maddison/>
+- **Global Carbon Project.** *Global Carbon Budget.* The underlying territorial CO2 estimates. <https://www.globalcarbonproject.org/carbonbudget/>
+
+Country boundaries for @fig-map are drawn from **Natural Earth** (public domain), accessed through the `rnaturalearth` package. <https://www.naturalearthdata.com>
+
+## Software {#sec-ref-software}
+
+The analysis was written in R `r paste(R.version$major, R.version$minor, sep = ".")` (R Core Team, R Foundation for Statistical Computing, Vienna; <https://www.R-project.org>) and rendered with Quarto (<https://quarto.org>). The packages used are listed in @tbl-packages, with the versions actually loaded for this render.
+
+```{r ref-packages}
+#| label: tbl-packages
+#| tbl-cap: "R packages used, with the version loaded for this render. Citation details for any package are reproducible with citation(\"package\") in R."
+
+tibble::tibble(
+  Package = c("tidyverse", "ggplot2", "dplyr", "tidyr", "readr", "forcats",
+              "scales", "ggrepel", "patchwork", "countrycode", "sf",
+              "rnaturalearth", "knitr"),
+  Purpose = c("Core data-manipulation and plotting collection",
+              "All figures",
+              "Data manipulation and joins",
+              "Reshaping between wide and long form",
+              "Reading the cached CSV files",
+              "Ordering factors in ranked figures",
+              "Axis formatting and label helpers",
+              "Non-overlapping text labels",
+              "Composing the two-panel continent figure",
+              "Mapping ISO codes to continents and regions",
+              "Handling the map geometries",
+              "Supplying the Natural Earth country boundaries",
+              "Rendering tables and executing the document")
+) |>
+  dplyr::mutate(Version = vapply(Package,
+                                 function(p) as.character(utils::packageVersion(p)),
+                                 character(1))) |>
+  dplyr::relocate(Version, .after = Package) |>
+  knitr::kable(align = c("l", "r", "l"))
 ```
