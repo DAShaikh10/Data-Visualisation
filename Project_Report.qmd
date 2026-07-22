@@ -511,7 +511,7 @@ Because a single coefficient can conceal structure — a strong nonlinear relati
 
 ```{r eda-gdp-ren}
 #| label: fig-gdp-ren
-#| fig-cap: !expr 'paste0("GDP per capita (logarithmic) against the renewable share of primary energy, ", eda_year, ", for countries with populations above one million, coloured by continent. The fitted line is essentially flat and the cloud shows no hidden nonlinear pattern: rich and poor countries alike appear at every level of renewable share. Norway and Qatar sit at almost the same income yet at opposite extremes of the vertical axis.")'
+#| fig-cap: !expr 'paste0("GDP per capita (logarithmic) against the renewable share of primary energy, ", eda_year, ", for countries with populations above one million, coloured by continent. The fitted line is essentially flat and the cloud shows no hidden nonlinear pattern: rich and poor countries alike appear at every level of renewable share. Norway and Qatar are both among the wealthiest economies shown, yet they sit at opposite extremes of the vertical axis.")'
 #| fig-height: 5.5
 
 gdp_ren <- co2 |>
@@ -547,7 +547,7 @@ ggplot(gdp_ren, aes(gdp_pc, ren)) +
        caption = owid_caption)
 ```
 
-@fig-gdp-ren confirms that the near-zero coefficient is genuine rather than an artefact of averaging. The fitted line is flat across two orders of magnitude of income, and no curvature or clustering emerges that a linear coefficient might have missed. The most instructive contrasts are vertical rather than horizontal: Norway and Qatar command almost identical GDP per capita yet occupy opposite ends of the renewable axis, while in the middle of the income range Brazil's hydroelectric endowment lifts its renewable share to nearly one half, far above similarly placed fossil-dependent economies. Whatever separates clean from carbon-intensive energy systems, it is visible at every income level, and it is not wealth itself.
+@fig-gdp-ren confirms that the near-zero coefficient is genuine rather than an artefact of averaging. The fitted line is flat across two orders of magnitude of income, and no curvature or clustering emerges that a linear coefficient might have missed. The most instructive contrasts are vertical rather than horizontal: Norway and Qatar are both among the world's wealthiest economies, yet they sit at opposite extremes of the renewable axis, while further down the income range Brazil's hydroelectric endowment lifts its renewable share to nearly one half, far above fossil-dependent economies of comparable income. Whatever separates clean from carbon-intensive energy systems, it is visible at every income level, and it is not wealth itself.
 
 ## A low-dimensional view: principal component analysis {#sec-pca}
 
