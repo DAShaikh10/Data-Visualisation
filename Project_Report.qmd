@@ -202,7 +202,7 @@ stopifnot(length(eda_year) == 1, !is.na(eda_year))
 ref_n <- coverage |> filter(year == eda_year) |> pull(n)
 ```
 
-The most recent year meeting the joint-coverage criterion is **`r eda_year`** (with `r ref_n` countries reporting all four indicators), and it is used as the common reference year for all cross-sectional figures so that they remain directly comparable.
+The most recent year for which all four indicators are jointly reported is **`r eda_year`**, with `r ref_n` countries meeting the coverage threshold; because the Maddison GDP series terminates in `r eda_year`, no later year qualifies. It is used as the common reference year for all cross-sectional figures so that they remain directly comparable.
 
 ## Scope and shape of the data {#sec-scope}
 
