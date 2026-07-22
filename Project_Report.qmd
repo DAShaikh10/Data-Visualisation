@@ -1484,3 +1484,12 @@ tibble::tibble(
   dplyr::relocate(Version, .after = Package) |>
   knitr::kable(align = c("l", "r", "l"))
 ```
+
+# AI Usage Disclaimer {#sec-ai-disclaimer}
+
+Generative AI tools were used only in a limited and supervised capacity during the preparation of this report. Their role was restricted to non-substantive support tasks:
+
+- **Code formatting.** Improving the readability and organization of existing R code, correcting minor syntax issues, and refining the layout of figures and tables. All analytical decisions, including the selection of indicators, reference years, data filters, statistical methods, and visualizations, were made exclusively by the authors.
+- **Language editing.** Assisting with grammar, wording, and overall clarity of text that had already been written by the authors. The report's structure, analysis, interpretations, and conclusions were developed independently by the authors.
+
+No AI-generated content was used to perform the data analysis, interpret results, or formulate conclusions. The authors independently conducted and verified all analyses and accept full responsibility for the accuracy, integrity, and originality of the work presented.
