@@ -1454,7 +1454,7 @@ Country boundaries for @fig-map are drawn from **Natural Earth** (public domain)
 
 ## Software {#sec-ref-software}
 
-The analysis was written in R `r paste(R.version$major, R.version$minor, sep = ".")` (R Core Team, R Foundation for Statistical Computing, Vienna; <https://www.R-project.org>) and rendered with Quarto (<https://quarto.org>). The packages used are listed in @tbl-packages, with the versions actually loaded for this render.
+The analysis was written in R `r paste(R.version$major, R.version$minor, sep = ".")` (R Core Team, R Foundation for Statistical Computing, Vienna; <https://www.R-project.org>) and rendered with Quarto (<https://quarto.org>). The packages used are listed in @tbl-packages, with the versions actually loaded for this render. The complete source — the Quarto document, the data-acquisition code, and everything required to reproduce every figure in this report — is available at <https://github.com/DAShaikh10/Data-Visualisation>.
 
 ```{r ref-packages}
 #| label: tbl-packages
