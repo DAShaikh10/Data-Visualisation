@@ -130,7 +130,11 @@ The analysis draws on two open panel datasets published by Our World in Data (OW
 ```{r load-data}
 #| label: load-data
 
-# Download each CSV once, then read from disk. Delete data/ to refresh.
+# --- Reproducible data acquisition -----------------------------------------
+# Download each CSV once into a local cache, then always read from disk. This
+# pins the analysis to a fixed snapshot: re-rendering next month cannot silently
+# change the figures or invalidate the numbers quoted in the text. Delete the
+# cache directory to refresh against the latest upstream release.
 
 data_dir <- "data"
 dir.create(data_dir, showWarnings = FALSE)
