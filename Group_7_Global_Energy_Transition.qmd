@@ -57,10 +57,7 @@ execute:
 #| label: setup
 #| include: false
 
-# Packages required to reproduce this report. Any that are absent are installed
-# on first render, so the document builds on a clean R installation without
-# manual setup. rnaturalearthdata is not attached below but is required at run
-# time by ne_countries() in the map figure.
+# Install any missing packages so the report renders on a clean R installation.
 required_pkgs <- c("tidyverse", "scales", "ggrepel", "patchwork", "countrycode",
                    "sf", "rnaturalearth", "rnaturalearthdata", "knitr")
 missing_pkgs  <- required_pkgs[
