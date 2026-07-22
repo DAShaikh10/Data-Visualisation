@@ -2,15 +2,14 @@
 data/
 
 # Quarto/knitr render artifacts (regenerated on every render)
-Project_Report_cache/
-Project_Report_files/
 *_cache/
 *_files/
+*-cache/
 .quarto/
 
 # Rendered outputs (regenerable from the .qmd; force-add for submission if needed)
-Project_Report.html
-Project_Report.pdf
+*.html
+*.pdf
 
 # R / RStudio
 .Rproj.user/
@@ -18,4 +17,4 @@ Project_Report.pdf
 .RData
 
 # OS
-.DS_Store*.Rproj
+.DS_Store

@@ -57,6 +57,19 @@ execute:
 #| label: setup
 #| include: false
 
+# Packages required to reproduce this report. Any that are absent are installed
+# on first render, so the document builds on a clean R installation without
+# manual setup. rnaturalearthdata is not attached below but is required at run
+# time by ne_countries() in the map figure.
+required_pkgs <- c("tidyverse", "scales", "ggrepel", "patchwork", "countrycode",
+                   "sf", "rnaturalearth", "rnaturalearthdata", "knitr")
+missing_pkgs  <- required_pkgs[
+  !vapply(required_pkgs, requireNamespace, logical(1), quietly = TRUE)
+]
+if (length(missing_pkgs)) {
+  install.packages(missing_pkgs, repos = "https://cloud.r-project.org")
+}
+
 library(tidyverse)
 library(scales)
 library(ggrepel)
@@ -1463,7 +1476,7 @@ The analysis was written in R `r paste(R.version$major, R.version$minor, sep = "
 tibble::tibble(
   Package = c("tidyverse", "ggplot2", "dplyr", "tidyr", "readr", "forcats",
               "scales", "ggrepel", "patchwork", "countrycode", "sf",
-              "rnaturalearth", "knitr"),
+              "rnaturalearth", "rnaturalearthdata", "knitr"),
   Purpose = c("Core data-manipulation and plotting collection",
               "All figures",
               "Data manipulation and joins",
@@ -1476,6 +1489,7 @@ tibble::tibble(
               "Mapping ISO codes to continents and regions",
               "Handling the map geometries",
               "Supplying the Natural Earth country boundaries",
+              "The country boundary data itself, loaded by rnaturalearth",
               "Rendering tables and executing the document")
 ) |>
   dplyr::mutate(Version = vapply(Package,
