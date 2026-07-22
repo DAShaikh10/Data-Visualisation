@@ -285,7 +285,7 @@ cov_long <- bind_rows(
                             levels = c("CO2 per capita", "GDP",
                                        "Energy per capita", "Renewables share")))
 
-cov_pal <- c(`CO2 per capita`    = "#B2182B",
+cov_pal <- c(`CO2 per capita`    = "#b2182b",
              GDP                 = "#c46210",
              `Energy per capita` = "#2166ac",
              `Renewables share`  = "#1b7837")
@@ -494,8 +494,8 @@ corr_long <- as.data.frame(cmat) |>
 ggplot(corr_long, aes(var1, var2, fill = r)) +
   geom_tile(colour = "white", linewidth = 0.6) +
   geom_text(aes(label = sprintf("%.2f", r)), size = 3,
-            colour = ifelse(abs(corr_long$r) > 0.6, "white", "grey20")) +
-  scale_fill_gradient2(low = "#2166AC", mid = "grey95", high = "#B2182B",
+            colour = if_else(abs(corr_long$r) > 0.6, "white", "grey20")) +
+  scale_fill_gradient2(low = "#2166ac", mid = "grey95", high = "#b2182b",
                        midpoint = 0, limits = c(-1, 1), name = "r") +
   coord_fixed() +
   labs(title = "Cross-country correlation of energy and emissions indicators",
@@ -537,7 +537,7 @@ ggplot(gdp_ren, aes(gdp_pc, ren)) +
   geom_text_repel(data = filter(gdp_ren, country %in% gdp_ren_label),
                   aes(label = country), size = 2.9, colour = "grey30",
                   max.overlaps = Inf, box.padding = 0.35, seed = 7) +
-  scale_x_log10(labels = dollar_format(accuracy = 1)) +
+  scale_x_log10(labels = label_dollar(accuracy = 1)) +
   scale_colour_manual(values = continent_pal, name = NULL) +
   labs(title = "Wealth does not buy a clean energy system",
        subtitle = paste0("GDP per capita (log) against renewable share, ", eda_year,
@@ -964,7 +964,7 @@ ggplot(intensity_chg, aes(pct_change, country, fill = pct_change < 0)) +
   geom_col(width = 0.65) +
   geom_vline(xintercept = 0, colour = "grey30") +
   geom_text(aes(label = sprintf("%+.0f%%", pct_change),
-                hjust = ifelse(pct_change < 0, 1.15, -0.15)), size = 3.4) +
+                hjust = if_else(pct_change < 0, 1.15, -0.15)), size = 3.4) +
   scale_fill_manual(values = c(`TRUE` = "#1b7837", `FALSE` = "#b2182b"),
                     guide = "none") +
   scale_x_continuous(expand = expansion(mult = 0.18)) +
