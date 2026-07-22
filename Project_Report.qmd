@@ -1143,7 +1143,7 @@ ggplot(snap, aes(co2, country_ord, fill = continent)) +
   facet_wrap(~year, scales = "free_y") +
   scale_y_discrete(labels = function(x) sub("___.*$", "", x)) +
   scale_fill_manual(values = continent_pal, name = NULL, drop = TRUE) +
-  scale_x_continuous(labels = comma) +
+  scale_x_continuous(labels = label_comma()) +
   labs(title = "The ranking of leading emitters, 1990 against 2022",
        x = lab_co2_mt, y = NULL, caption = owid_caption)
 ```
@@ -1186,7 +1186,7 @@ ws_labels <- c("0–1", "1–2", "2–5", "5–10", "10–15", "15–20", "≥20
 # Build an explicit country x year grid so every country appears in every facet
 # (grey where data are missing) instead of vanishing from a panel. The join is
 # then strictly one-to-one on (iso, year): no many-to-many fudge required.
-map_data <- tidyr::crossing(iso_a3 = world_sf$iso_a3, year = map_years) |>
+map_data <- crossing(iso_a3 = world_sf$iso_a3, year = map_years) |>
   left_join(ws_share, by = c("iso_a3" = "iso_code", "year")) |>
   left_join(world_sf, by = "iso_a3") |>
   mutate(ws_bin = cut(ws_share_energy, breaks = ws_breaks, labels = ws_labels,
