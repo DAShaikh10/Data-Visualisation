@@ -723,12 +723,11 @@ With the cross-country structure established, the analysis begins at the largest
 
 The most fundamental question in the transition debate is whether renewable capacity is replacing fossil fuels or merely supplementing them. A stacked area chart addresses this directly: the total height represents aggregate demand, and the coloured bands its constituent sources. Were renewables displacing fossil fuels, the fossil bands would contract; were they merely additive, the entire stack would simply grow taller.
 
-```{r q1-mix}
-#| label: fig-q1
-#| fig-cap: "Global primary energy consumption by source, 1990 to 2024. A rising total height indicates growing demand. The analytical question is whether the fossil bands contract in absolute terms, or merely grow more slowly than the renewable bands."
-#| fig-width: 12
-#| fig-height: 5
+```{r global-year-span}
+#| label: global-year-span
+#| include: false
 
+mix_start <- 1990
 mix_vars <- c(
   Coal = "coal_consumption", Oil = "oil_consumption", Gas = "gas_consumption",
   Nuclear = "nuclear_consumption", Hydro = "hydro_consumption",
@@ -736,8 +735,29 @@ mix_vars <- c(
   `Other renewables` = "other_renewable_consumption"
 )
 
+# Last year with complete World reporting for every plotted source (excludes
+# trailing partially filled years such as a blank 2025 stub).
+mix_end <- energy_raw |>
+  filter(country == "World", year >= mix_start) |>
+  select(year, all_of(unname(mix_vars))) |>
+  filter(if_all(-year, ~ !is.na(.x))) |>
+  summarise(y = max(year), .groups = "drop") |>
+  pull(y)
+
+co2_end <- co2_raw |>
+  filter(country == "World", year >= mix_start, !is.na(co2)) |>
+  summarise(y = max(year), .groups = "drop") |>
+  pull(y)
+```
+
+```{r q1-mix}
+#| label: fig-q1
+#| fig-cap: !expr 'paste0("Global primary energy consumption by source, ", mix_start, " to ", mix_end, ". Biofuels and a small residual are omitted, so the share panel is among the sources shown rather than of every joule of primary energy. A rising total height indicates growing demand. The analytical question is whether the fossil bands contract in absolute terms, or merely grow more slowly than the renewable bands.")'
+#| fig-width: 12
+#| fig-height: 5
+
 global_mix <- energy_raw |>
-  filter(country == "World", year >= 1990) |>
+  filter(country == "World", year >= mix_start, year <= mix_end) |>
   select(year, all_of(unname(mix_vars))) |>
   pivot_longer(-year, names_to = "source_var", values_to = "twh") |>
   mutate(source = factor(names(mix_vars)[match(source_var, mix_vars)],
@@ -756,6 +776,14 @@ source_order <- global_mix |>
 global_mix <- global_mix |>
   mutate(source = factor(source, levels = source_order))
 
+fossil_share_end <- global_mix |>
+  filter(year == mix_end) |>
+  summarise(
+    share = sum(twh[source %in% c("Coal", "Oil", "Gas")]) / sum(twh),
+    .groups = "drop"
+  ) |>
+  pull(share)
+
 p_abs <- ggplot(global_mix, aes(year, twh, fill = source)) +
   geom_area(colour = "white", linewidth = 0.1) +
   scale_fill_manual(values = energy_pal, name = NULL) +
@@ -766,13 +794,14 @@ p_share <- ggplot(global_mix, aes(year, twh, fill = source)) +
   geom_area(position = "fill", colour = "white", linewidth = 0.1) +
   scale_fill_manual(values = energy_pal, name = NULL) +
   scale_y_continuous(labels = label_percent()) +
-  labs(subtitle = "Share of global total", x = NULL, y = NULL)
+  labs(subtitle = "Share of sources shown", x = NULL, y = NULL)
 
 (p_abs + p_share) +
   plot_layout(guides = "collect") +
   plot_annotation(
     title = "Global energy demand continues to rise",
-    subtitle = "Primary energy consumption by source, 1990 to 2024",
+    subtitle = paste0("Primary energy consumption by source, ",
+                       mix_start, " to ", mix_end),
     caption = owid_caption
   ) &
   theme(legend.position = "right")
@@ -780,7 +809,7 @@ p_share <- ggplot(global_mix, aes(year, twh, fill = source)) +
 
 As shown in @fig-q1, the aggregate stack rises throughout the period; global demand has not plateaued. Although solar and wind expand visibly, coal, oil, and gas have not contracted in absolute terms but have at most flattened. At the global scale, therefore, renewable generation has so far been additive, meeting incremental demand rather than displacing the established fossil base. This finding sets a deliberately sober frame for the remainder of the report, since every encouraging national case that follows must be read against a world that continues, in absolute terms, to burn more.
 
-To answer the question directly: at the global scale, renewables are supplementing fossil fuels rather than replacing them. The share panel in @fig-q1 confirms that fossil fuels still account for the overwhelming majority of primary energy consumption in 2024, despite three decades of renewable expansion. Substitution has not yet occurred at the aggregate level.
+To answer the question directly: at the global scale, renewables are supplementing fossil fuels rather than replacing them. The share panel in @fig-q1 confirms that fossil fuels still account for `r sprintf("%.0f", 100 * fossil_share_end)` percent of the sources shown in `r mix_end`, despite three decades of renewable expansion. Substitution has not yet occurred at the aggregate level.
 
 ## The response of emissions to global shocks {#sec-q2}
 
@@ -788,10 +817,10 @@ If emissions are governed primarily by the structure of energy systems, then eve
 
 ```{r q2-shocks}
 #| label: fig-q2
-#| fig-cap: "Global annual CO2 emissions, 1990 to 2024, with three annotated disturbances: two global demand shocks (2008, 2020) and one localised supply-side disruption (2011). The analytical question is whether each produces a visible global contraction, and whether any contraction redirects the underlying trend rather than merely denting it."
+#| fig-cap: !expr 'paste0("Global annual CO2 emissions, ", mix_start, " to ", co2_end, ", with three annotated disturbances: two global demand shocks (2008, 2020) and one localised supply-side disruption (2011). The analytical question is whether each produces a visible global contraction, and whether any contraction redirects the underlying trend rather than merely denting it.")'
 
 world_co2 <- co2_raw |>
-  filter(country == "World", year >= 1990) |>
+  filter(country == "World", year >= mix_start, year <= co2_end) |>
   select(year, co2) |>
   filter(!is.na(co2))
 
@@ -806,15 +835,16 @@ ggplot(world_co2, aes(year, co2)) +
   geom_line(linewidth = 1.1, colour = "#B2182B") +
   geom_point(data = filter(world_co2, year %in% shocks$year),
              size = 2.6, colour = "#B2182B") +
- # Anchor labels near the x-axis to prevent overlapping the emissions line (>30k Mt).
+  # Anchor labels near the x-axis to prevent overlapping the emissions line (>30k Mt).
   geom_text(data = shocks, aes(x = year, y = 1200, label = label),
             angle = 90, hjust = 0, vjust = 0.5, nudge_x = -0.5, size = 2.8,
             colour = "grey40", inherit.aes = FALSE) +
   scale_y_continuous(labels = comma_format(suffix = " Mt"),
                      limits = c(0, NA), expand = expansion(mult = c(0, 0.08))) +
-  scale_x_continuous(breaks = seq(1990, 2024, 5)) +
+  scale_x_continuous(breaks = seq(mix_start, co2_end, 5)) +
   labs(title = "Shocks interrupt the emissions curve but rarely redirect it",
-       subtitle = "Global annual CO2, 1990 to 2024, with major shocks annotated",
+       subtitle = paste0("Global annual CO2, ", mix_start, " to ", co2_end,
+                          ", with major shocks annotated"),
        x = NULL, y = lab_co2_mt, caption = owid_caption)
 ```
 
@@ -822,20 +852,29 @@ ggplot(world_co2, aes(year, co2)) +
 #| label: tbl-q2
 #| tbl-cap: "Year-over-year change in global emissions surrounding the 2008 and 2020 shocks. Changes are computed on the full annual series before subsetting to these years, so each figure is a genuine year-over-year comparison."
 
-world_co2 |>
+co2_yoy <- world_co2 |>
   arrange(year) |>
-  mutate(`% change` = round(100 * (co2 - lag(co2)) / lag(co2), 1)) |>
+  mutate(pct = 100 * (co2 - lag(co2)) / lag(co2))
+
+pct_co2 <- function(y) co2_yoy |> filter(year == y) |> pull(pct)
+drop_2009     <- pct_co2(2009)
+rebound_2010  <- pct_co2(2010)
+drop_2020     <- pct_co2(2020)
+rebound_2021  <- pct_co2(2021)
+
+co2_yoy |>
+  mutate(`% change` = round(pct, 1)) |>
   filter(year %in% c(2007, 2008, 2009, 2010, 2019, 2020, 2021, 2022)) |>
-  mutate(co2 = comma(round(co2)),
-         `% change` = paste0(ifelse(`% change` > 0, "+", ""), `% change`, "%")) |>
+  transmute(year, co2 = comma(round(co2)),
+            `% change` = paste0(ifelse(`% change` > 0, "+", ""), `% change`, "%")) |>
   knitr::kable(col.names = c("Year", "Global CO2 (Mt)", "% change"), align = "r")
 ```
 
-Both the 2008 financial crisis and the 2020 lockdowns produce sharp and clearly visible contractions in @fig-q2, and in each case emissions recover to their prior trajectory within approximately two years, after which the underlying ascent resumes. The year-over-year figures in @tbl-q2 make this precise: the −1.7% contraction of 2009 was followed by a +5.7% rebound in 2010, and the −5.2% collapse of 2020 by a +4.9% recovery in 2021. The shocks dent the trajectory but do not redirect it, which is consistent with the proposition that emissions are determined by the structural composition of energy systems rather than by transient demand events. It is precisely for this reason that the slow, structural transition examined in the remainder of the report is of greater consequence than any single crisis.
+Both the 2008 financial crisis and the 2020 lockdowns produce sharp and clearly visible contractions in @fig-q2, and in each case emissions recover to their prior trajectory within approximately two years, after which the underlying ascent resumes. The year-over-year figures in @tbl-q2 make this precise: the `r sprintf("%+.1f", drop_2009)`% contraction of 2009 was followed by a `r sprintf("%+.1f", rebound_2010)`% rebound in 2010, and the `r sprintf("%+.1f", drop_2020)`% collapse of 2020 by a `r sprintf("%+.1f", rebound_2021)`% recovery in 2021. The shocks dent the trajectory but do not redirect it, which is consistent with the proposition that emissions are determined by the structural composition of energy systems rather than by transient demand events. It is precisely for this reason that the slow, structural transition examined in the remainder of the report is of greater consequence than any single crisis.
 
-To answer the question directly: global shocks interrupt the emissions curve but do not redirect it. The structural composition of energy systems — what kinds of power plants exist and what fuels they burn — governs emissions far more durably than any demand-side disruption, however severe. Crisis alone is not a climate policy.
+To answer the question directly: global shocks interrupt the emissions curve but do not redirect it. The structural composition of energy systems; what kinds of power plants exist and what fuels they burn,  governs emissions far more durably than any demand-side disruption, however severe. Crisis alone is not a climate policy.
 
-Taken together, the two findings of this section converge on a single conclusion. Renewable capacity is growing, but at the global scale it is meeting new demand rather than displacing the fossil base that already exists. And when demand does fall — whether through financial crisis or pandemic — the underlying fossil infrastructure ensures that emissions recover as soon as economic activity resumes. Both findings point to the same diagnosis: what governs global emissions is not the pace of renewable addition, nor the frequency of economic shocks, but the structural composition of the energy system as a whole. Until the fossil bands in @fig-q1 begin to contract in absolute terms, and until the emissions curve in @fig-q2 responds to a shock by settling at a permanently lower level rather than rebounding, the transition at the global scale remains incomplete. The national cases examined in the sections that follow show that such structural change is possible — but the global aggregate makes clear that it has not yet arrived.
+Taken together, the two findings of this section converge on a single conclusion. Renewable capacity is growing, but at the global scale it is meeting new demand rather than displacing the fossil base that already exists. And when demand does fall,  whether through financial crisis or pandemic; the underlying fossil infrastructure ensures that emissions recover as soon as economic activity resumes. Both findings point to the same diagnosis: what governs global emissions is not the pace of renewable addition, nor the frequency of economic shocks, but the structural composition of the energy system as a whole. Until the fossil bands in @fig-q1 begin to contract in absolute terms, and until the emissions curve in @fig-q2 responds to a shock by settling at a permanently lower level rather than rebounding, the transition at the global scale remains incomplete. The national cases examined in the sections that follow show that such structural change is possible; but the global aggregate makes clear that it has not yet arrived.
 
 # Wealth and the Carbon Footprint {#sec-wealth}
 
@@ -847,13 +886,12 @@ If prosperity necessarily entailed high emissions, the prospects for the transit
 
 ```{r q3-decoupling}
 #| label: fig-q3
-#| fig-cap: !expr 'paste0("GDP per capita (logarithmic) against CO2 per capita for ", eda_year, ", with bubble area proportional to population and colour giving the low-carbon share of energy. This is a single-year cross-section: countries low and to the right are wealthy yet comparatively clean, showing that high income does not strictly require high emissions. The vertical dispersion at a given level of income carries the principal message; it does not, on its own, establish that any one country has reduced emissions over time.")'
+#| fig-cap: !expr 'paste0("GDP per capita (logarithmic) against CO2 per capita for ", eda_year, ", with bubble area proportional to population and colour giving the low-carbon share of energy (grey where that share is unreported). This is a single-year cross-section: countries low and to the right are wealthy yet comparatively clean, showing that high income does not strictly require high emissions. The vertical dispersion at a given level of income carries the principal message; it does not, on its own, establish that any one country has reduced emissions over time.")'
 
 decoupling <- co2 |>
   filter(year == eda_year, !is.na(gdp), !is.na(co2_per_capita),
          !is.na(population), population > 1e6) |>
   mutate(gdp_per_capita = gdp / population) |>
-
   left_join(
     energy |> filter(year == eda_year) |>
       select(iso_code, low_carbon_share_energy),
@@ -863,6 +901,13 @@ decoupling <- co2 |>
 to_label <- c("Norway", "France", "Sweden", "Qatar", "United States",
               "China", "India", "Germany", "Switzerland",
               "United Arab Emirates")
+
+co2_of <- function(c) decoupling |> filter(country == c) |> pull(co2_per_capita)
+fr_co2_pc <- co2_of("France")
+se_co2_pc <- co2_of("Sweden")
+qa_co2_pc <- co2_of("Qatar")
+n_lowc_na <- sum(is.na(decoupling$low_carbon_share_energy))
+n_decoupling <- nrow(decoupling)
 
 ggplot(decoupling, aes(gdp_per_capita, co2_per_capita)) +
   # Fit the reference line in the same (log10-x) space in which it is drawn, so
@@ -881,14 +926,15 @@ ggplot(decoupling, aes(gdp_per_capita, co2_per_capita)) +
                          name = "Low-carbon\nshare of energy (%)") +
   labs(title = "High income does not require high emissions",
        subtitle = paste0("GDP per capita (log) against CO2 per capita, ", eda_year,
-                          "; bubble area = population, colour = low-carbon share"),
+                          "; bubble area = population, colour = low-carbon share",
+                          " (grey if unreported)"),
        x = "GDP per capita (logarithmic scale)", y = lab_co2_pc,
        caption = owid_caption)
 ```
 
-An upward association is present in @fig-q3, since higher income is, on average, accompanied by higher emissions per capita. The dispersion about that trend, however, is the substantive finding. At comparable levels of income, France and Sweden lie well below the Gulf economies, achieving a fraction of the per-capita emissions because they generate electricity predominantly from nuclear and hydroelectric sources rather than from oil and gas. The cross-section therefore shows that wealth and carbon can diverge, that a high standard of living is compatible with a comparatively low footprint, and that the difference is associated with the composition of the energy system rather than with any deficit of prosperity. It is worth being precise about what this single year cannot show: a snapshot of where countries sit today does not trace whether any individual country has reduced its emissions as it grew richer, which is the stricter, longitudinal sense of decoupling and which the historical case studies that follow are better suited to address. With that qualification, @fig-q3 provides the visual resolution of the near-zero correlation identified in @sec-corr, since what most distinguishes the cleaner economies is the manner in which they produce energy, not the quantity of wealth they command.
+An upward association is present in @fig-q3, since higher income is, on average, accompanied by higher emissions per capita. The dispersion about that trend, however, is the substantive finding. Among high-income economies, France and Sweden lie well below the much richer Gulf oil exporters, achieving a fraction of the per-capita emissions because they generate electricity predominantly from nuclear and hydroelectric sources rather than from oil and gas. (Grey points mark the `r n_lowc_na` of `r n_decoupling` countries without a reported low-carbon share; the income–emissions pattern does not depend on that colour.) The cross-section therefore shows that wealth and carbon can diverge, that a high standard of living is compatible with a comparatively low footprint, and that the difference is associated with the composition of the energy system rather than with any deficit of prosperity. It is worth being precise about what this single year cannot show: a snapshot of where countries sit today does not trace whether any individual country has reduced its emissions as it grew richer, which is the stricter, longitudinal sense of decoupling and which the historical case studies that follow are better suited to address. With that qualification, @fig-q3 provides the visual resolution of the near-zero correlation identified in @sec-corr, since what most distinguishes the cleaner economies is the manner in which they produce energy, not the quantity of wealth they command.
 
-To answer the question directly: prosperity does not require a high carbon footprint. The evidence from @fig-q3 shows that the decisive factor is the composition of the energy system — not income level. France and Sweden demonstrate that economies at the top of the global income distribution can emit as little as 3–4 tonnes of CO₂ per capita, roughly one tenth of Qatar's footprint at a comparable level of wealth. Decarbonisation and continued prosperity are therefore mutually compatible in principle, even if the structural investments required to achieve both simultaneously remain the central challenge.
+To answer the question directly: prosperity does not require a high carbon footprint. The evidence from @fig-q3 shows that the decisive factor is the composition of the energy system and not income level. France and Sweden emit about `r sprintf("%.1f", min(fr_co2_pc, se_co2_pc))`–`r sprintf("%.1f", max(fr_co2_pc, se_co2_pc))` tonnes of CO₂ per capita, several times below Qatar at `r sprintf("%.0f", qa_co2_pc)` tonnes, even though Qatar is substantially richer. Decarbonisation and continued prosperity are therefore mutually compatible in principle, even if the structural investments required to achieve both simultaneously remain the central challenge.
 
 # Did Historical Shocks Produce Structural Change? {#sec-shocks}
 
@@ -1316,7 +1362,7 @@ The slope graph anchors only two years. Plotting the full `r start_yr`–`r end_
 
 ```{r q5-trajectory}
 #| label: fig-q5-trajectory
-#| fig-cap: !expr paste0("Renewable share of primary energy, ", start_yr, " to ", end_yr, ", for the fifteen fastest-moving economies. Each line is one country's full annual path; countries are coloured by their total gain and labelled at the final year. The curvature distinguishes steady climbers from economies that surged late in the window.")
+#| fig-cap: !expr 'paste0("Renewable share of primary energy, ", start_yr, " to ", end_yr, ", for the fifteen fastest-moving economies. Each line is the full annual path for one country; countries are coloured by their total gain and labelled at the final year. The curvature distinguishes steady climbers from economies that surged late in the window.")'
 #| fig-height: 6
 
 leader_countries <- change_tbl$country
@@ -1360,7 +1406,7 @@ Returning to the question posed at the outset; how, where, and why the world dec
 
 summary_headline <- tibble(
   Finding = c(
-    "Global energy demand growth, 1990–2024",
+    paste0("Global energy demand growth, ", mix_start, "–", mix_end),
     "Correlation, GDP per capita vs renewable share",
     "Asia's share of global CO2, 2022",
     "Fastest-moving economies concentrated in Europe",
