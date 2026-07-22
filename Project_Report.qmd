@@ -1264,23 +1264,22 @@ ggplot(change_tbl, aes(change_pp, reorder(country, change_pp))) +
 #| label: q5-region-count
 #| include: false
 
-# Quantify the "concentrated in Western Europe" claim rather than asserting it.
+# Quantify the "concentrated in Europe" claim rather than asserting it.
 change_tbl_region <- change_tbl |>
-  mutate(continent = countrycode(iso_code, "iso3c", "continent"),
-         region     = countrycode(iso_code, "iso3c", "region23"))
+  mutate(continent = countrycode(iso_code, "iso3c", "continent"))
 
 n_europe   <- sum(change_tbl_region$continent == "Europe", na.rm = TRUE)
 n_total    <- nrow(change_tbl_region)
 top3       <- change_tbl |> slice_head(n = 3) |> pull(country)
 ```
 
-In @fig-q5 Of the fifteen fastest-moving economies, `r n_europe` of `r n_total` are in Europe, confirming that the momentum ranking is not evenly spread but concentrated in a specific policy environment; consistent with EU-level renewable targets and national feed-in-tariff schemes rather than a generalised global trend. The three fastest movers are `r paste(top3, collapse = ", ")`.
+In @fig-q5, of the fifteen fastest-moving economies, `r n_europe` of `r n_total` are in Europe, confirming that the momentum ranking is not evenly spread but concentrated in a specific policy environment; consistent with EU-level renewable targets and national feed-in-tariff schemes rather than a generalised global trend. The three fastest movers are `r paste(top3, collapse = ", ")`.
 
-A bar chart of endpoint change, however, cannot distinguish a country that climbed steadily across fifteen years from one that surged late and plateaued; a distinction the report has treated as analytically important since the shock-recovery curves in @sec-shocks. The slope graph below adds that missing dimension in static form.
+A bar chart of endpoint change shows how far each country moved, but not where it started or finished in absolute share. The slope graph below adds those two anchors in static form. Distinguishing a steady climb from a late surge, however, requires the full annual path in @sec-scoreboard-trajectory.
 
 ```{r q5-slope}
 #| label: fig-q5-slope
-#| fig-cap: "Renewable share of primary energy, 2008 versus 2023, for the fifteen fastest-moving economies. The slope of each line is the pace of change; countries are ordered and coloured by their 2023 rank, so the steepest lines identify the countries that not only gained the most but did so most consistently across the period."
+#| fig-cap: "Renewable share of primary energy, 2008 versus 2023, for the fifteen fastest-moving economies. The slope of each line is the pace of change between the two endpoints; countries are coloured by their rank on total percentage-point gain, so the steepest lines identify the largest movers."
 #| fig-height: 6.5
 
 slope_df <- change_tbl |>
@@ -1302,7 +1301,7 @@ ggplot(slope_df, aes(year, share, group = country)) +
   scale_colour_viridis_c(option = "viridis", guide = "none") +
   scale_x_continuous(breaks = c(start_yr, end_yr),
                      limits = c(start_yr - 6, end_yr + 6)) +
-  labs(title = "Steady climbers versus late sprinters",
+  labs(title = "Start and end positions of the fastest movers",
        subtitle = paste0("Renewable share of primary energy, ", start_yr,
                           " and ", end_yr),
        x = NULL, y = "Renewables share of primary energy (%)",
@@ -1311,7 +1310,7 @@ ggplot(slope_df, aes(year, share, group = country)) +
 
 ## The path, not just the endpoint {#sec-scoreboard-trajectory}
 
-The slope graph anchors only two years. Plotting the full `r start_yr`–`r end_yr` trajectory for the same fifteen countries makes the *shape* of each climb; steady, accelerating, or plateauing, directly visible rather than inferred from two endpoints.
+The slope graph anchors only two years. Plotting the full `r start_yr`–`r end_yr` trajectory for the same fifteen countries makes the *shape* of each climb — steady, accelerating, or plateauing — directly visible rather than inferred from two endpoints.
 
 ```{r q5-trajectory}
 #| label: fig-q5-trajectory
@@ -1345,7 +1344,7 @@ ggplot(traj_df, aes(year, share, colour = change_pp, group = country)) +
        caption = owid_caption)
 ```
 
-Read together the @fig-q5-trajectory with the map in @sec-map, these three figures reinforce the same conclusion from three angles: the leaders are concentrated in Western Europe, their gains are recent rather than gradual across the whole period, and the trajectory view exposes an acceleration late in the window that a simple two-point comparison would understate. The appropriate criterion of leadership is therefore the rate of change, and specifically its recent trajectory, which identifies the economies driving the contemporary transition rather than those favoured by geographical endowment.
+Read together the @fig-q5-trajectory with the map in @sec-map, these three figures reinforce the same conclusion from three angles: the leaders are concentrated in Europe, their gains are recent rather than gradual across the whole period, and the trajectory view exposes an acceleration late in the window that a simple two-point comparison would understate. The appropriate criterion of leadership is therefore the rate of change, and specifically its recent trajectory, which identifies the economies driving the contemporary transition rather than those favoured by geographical endowment.
 
 # Discussion and Conclusion {#sec-conclusion}
 
@@ -1366,7 +1365,7 @@ summary_headline <- tibble(
     "France's carbon-intensity change, 1973–2000"
   ),
   Value = c(
-    "Rising throughout; fossil bands did not contract (§4.1)",
+    "Rising throughout; fossil bands did not contract (§3.1)",
     sprintf("r = %.2f (near zero) (§2.3)", r_gdp_ren),
     "Majority of global total, up from a small share at mid-century (§6.1)",
     sprintf("%d of %d fastest-moving economies (§7)", n_europe, n_total),
